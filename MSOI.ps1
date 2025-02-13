@@ -18,7 +18,7 @@ function Show-Progress {
 }
 
 # Descarga el Office Deployment Tool (ODT)
-$odtUrl = "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_18227-20162.exe"
+$odtUrl = "https://aka.ms/ODT"
 $odtExe = "OfficeDeploymentTool.exe"
 $odtPath = Join-Path $env:Temp $odtExe
 
@@ -32,24 +32,43 @@ Start-Process -FilePath $odtPath -ArgumentList "/quiet /extract:$env:Temp\ODT" -
 $officeConfigPath = Join-Path $env:Temp\ODT "configuration.xml"
 Write-Host "Generando configuración personalizada..." -ForegroundColor Cyan
 
-# Función para elegir opciones
-function Show-Menu {
-    param (
-        [string]$prompt,
-        [array]$options
-    )
-    $options | ForEach-Object { Write-Host "$($_.Index + 1). $_" }
-    do {
-        $choice = Read-Host $prompt
-    } while (-not ($choice -as [int]) -or $choice -le 0 -or $choice -gt $options.Count)
-    return $options[$choice - 1]
+# Menú para seleccionar versión
+Write-Host "Selecciona la versión de Office LTSC:"
+Write-Host "1. Office LTSC 2024"
+Write-Host "2. Office LTSC 2021"
+Write-Host "3. Office LTSC 2019"
+$versionChoice = Read-Host "Ingresa el número correspondiente"
+
+switch ($versionChoice) {
+    "1" { $version = "Office LTSC 2024" }
+    "2" { $version = "Office LTSC 2021" }
+    "3" { $version = "Office LTSC 2019" }
+    default {
+        Write-Host "Selección inválida. Ejecuta el script nuevamente y selecciona una opción válida." -ForegroundColor Red
+        exit
+    }
 }
 
-# Selección de versión
-$version = Show-Menu -prompt "Selecciona la versión de Office LTSC" -options @("Office LTSC 2024", "Office LTSC 2021", "Office LTSC 2019")
+# Menú para seleccionar idioma
+Write-Host "Selecciona el idioma para Office:"
+Write-Host "1. Español (es-ES)"
+Write-Host "2. Inglés (en-US)"
+Write-Host "3. Francés (fr-FR)"
+Write-Host "4. Alemán (de-DE)"
+Write-Host "5. Portugués Brasileño (pt-BR)"
+$languageChoice = Read-Host "Ingresa el número correspondiente"
 
-# Selección de idioma
-$language = Show-Menu -prompt "Selecciona el idioma de Office" -options @("es-ES", "en-US", "fr-FR", "de-DE", "pt-BR")
+switch ($languageChoice) {
+    "1" { $language = "es-ES" }
+    "2" { $language = "en-US" }
+    "3" { $language = "fr-FR" }
+    "4" { $language = "de-DE" }
+    "5" { $language = "pt-BR" }
+    default {
+        Write-Host "Selección inválida. Ejecuta el script nuevamente y selecciona una opción válida." -ForegroundColor Red
+        exit
+    }
+}
 
 # Selección de programas
 $apps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote")
