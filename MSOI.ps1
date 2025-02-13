@@ -119,6 +119,16 @@ foreach ($app in $apps) {
     }
 }
 
+# Excluir automáticamente las aplicaciones adicionales
+$config += @"
+            <ExcludeApp ID="Bing" />
+            <ExcludeApp ID="Groove" />
+            <ExcludeApp ID="Lync" />
+            <ExcludeApp ID="OneDrive" />
+            <ExcludeApp ID="OutlookForWindows" />
+            <ExcludeApp ID="Teams" />
+"@
+
 $config += "        </Product>`n"
 
 # Incluir Project si se seleccionó
