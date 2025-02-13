@@ -132,6 +132,18 @@ foreach ($app in $apps) {
     }
 }
 
+# Ensure Skype for Business is excluded
+$config += "            <ExcludeApp ID=\"Lync\" />`n"
+$config += "            <ExcludeApp ID=\"OneDrive\" />`n"
+$config += "            <ExcludeApp ID=\"Teams\" />`n"
+$config += "            <ExcludeApp ID=\"OutlookForWindows\" />`n"
+$config += "            <ExcludeApp ID=\"Bing\" />`n"
+$config += "            <ExcludeApp ID=\"Groove\" />`n"
+
+$config += @" 
+        </Product>
+    </Add>
+
 if ($selectedProducts -contains "Project") {
     $config += @"
         <Product ID="$projectID">
@@ -150,17 +162,7 @@ if ($selectedProducts -contains "Visio") {
 "@
 }
 
-# Ensure Skype for Business is excluded
-$config += "            <ExcludeApp ID=\"Lync\" />`n"
-$config += "            <ExcludeApp ID=\"OneDrive\" />`n"
-$config += "            <ExcludeApp ID=\"Teams\" />`n"
-$config += "            <ExcludeApp ID=\"OutlookForWindows\" />`n"
-$config += "            <ExcludeApp ID=\"Bing\" />`n"
-$config += "            <ExcludeApp ID=\"Groove\" />`n"
 
-$config += @"
-        </Product>
-    </Add>
     <Display Level="Full" AcceptEULA="TRUE" />
 </Configuration>
 "@
