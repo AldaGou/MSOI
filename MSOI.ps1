@@ -85,37 +85,24 @@ switch ($languageChoice) {
     }
 }
 
-# Definir las aplicaciones (Asegúrate de que esta lista esté correctamente declarada antes de usarla)
+# Selección de productos adicionales (Project y Visio)
+Write-Host "Do you want to include Project? (Y/N)"
+$includeProject = Read-Host
+Write-Host "Do you want to include Visio? (Y/N)"
+$includeVisio = Read-Host
+
+# Lista de aplicaciones
 $apps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote")
 
-# Total de aplicaciones y división para organización
-$totalApps = $apps.Count
-$half = [math]::Ceiling($totalApps / 2)
-
-# Mostrar encabezado
 Write-Host "Select the apps to install by entering the corresponding numbers separated by commas (e.g., 1,2,3):" -ForegroundColor Cyan
-
-# Mostrar las aplicaciones organizadas
-for ($i = 0; $i -lt $half; $i++) {
-    $leftIndex = $i + 1
-    $rightIndex = $i + $half + 1
-
-    $leftApp = "{0,3}. {1,-15}" -f $leftIndex, $apps[$i]
-    $rightApp = if ($rightIndex -le $totalApps) { "{0,3}. {1}" -f $rightIndex, $apps[$rightIndex - 1] } else { "" }
-    
-    Write-Host "$leftApp $rightApp"
+for ($i = 0; $i -lt $apps.Count; $i++) {
+    Write-Host "$($i+1). $($apps[$i])"
 }
-
-# Capturar las aplicaciones seleccionadas
 $appSelection = Read-Host "Enter the numbers of the apps you want to install (or press Enter to install all by default)"
-
-# Validar la selección
 if ([string]::IsNullOrWhiteSpace($appSelection)) {
-    Write-Host "No selection made. All apps will be installed by default." -ForegroundColor Yellow
     $selectedApps = $apps
 } else {
-    $selectedIndices = $appSelection -split ',' | ForEach-Object { $_.Trim() -as [int] }
-    $selectedApps = $selectedIndices | ForEach-Object { $apps[$_ - 1] } # Convertir los números a nombres de apps
+    $selectedApps = $appSelection -split ',' | ForEach-Object { $apps[$_ - 1] }
 }
 
 # Generar el archivo de configuración
@@ -128,51 +115,41 @@ $config = @"
 
 foreach ($app in $apps) {
     if (-not ($selectedApps -contains $app)) {
-        $config += "            <ExcludeApp ID=""$app"" />n"
+        $config += "            <ExcludeApp ID=""$app"" />`n"
     }
 }
 
-# Ensure Skype for Business is excluded
-$config += "            <ExcludeApp ID=\"Lync\" />`n"
-$config += "            <ExcludeApp ID=\"OneDrive\" />`n"
-$config += "            <ExcludeApp ID=\"Teams\" />`n"
-$config += "            <ExcludeApp ID=\"OutlookForWindows\" />`n"
-$config += "            <ExcludeApp ID=\"Bing\" />`n"
-$config += "            <ExcludeApp ID=\"Groove\" />`n"
+$config += "        </Product>`n"
 
-$config += @" 
-        </Product>
-    </Add>
-
-if ($selectedProducts -contains "Project") {
+# Incluir Project si se seleccionó
+if ($includeProject -eq "Y") {
     $config += @"
         <Product ID="$projectID">
             <Language ID="$language" />
         </Product>
-    </Add>
 "@
 }
 
-if ($selectedProducts -contains "Visio") {
+# Incluir Visio si se seleccionó
+if ($includeVisio -eq "Y") {
     $config += @"
         <Product ID="$visioID">
             <Language ID="$language" />
         </Product>
-    </Add>
 "@
 }
 
-
+$config += @"
+    </Add>
     <Display Level="Full" AcceptEULA="TRUE" />
 </Configuration>
 "@
 
-
 Set-Content -Path $officeConfigPath -Value $config
 Write-Host "Configuration file generated at: $officeConfigPath" -ForegroundColor Green
+
 # Comenzar la instalación
 Write-Host "Starting the Office LTSC installation..." -ForegroundColor Yellow
-
 Start-Process -FilePath "$env:Temp\ODT\setup.exe" -ArgumentList "/configure $officeConfigPath" -Wait
 
 Write-Host "Installation completed successfully." -ForegroundColor Green
