@@ -1,148 +1,103 @@
-# Habilitar manejo de errores estrictos
-$ErrorActionPreference = "Stop"
+# Carpeta temporal para trabajar
+$TempFolder = "$env:TEMP\OfficeSetup"
 
-# Función para manejar errores
-function Mostrar-Error {
-    param ($ErrorMessage)
-    Write-Host "`nERROR: $ErrorMessage" -ForegroundColor Red
-    Read-Host "Presiona Enter para cerrar el script"
-    Exit 1
-}
+# URL oficial para descargar la herramienta de implementación de Office
+$ODT_URL = "https://download.microsoft.com/download/2/6/E/26E3AEDE-10B1-4B6C-B3C1-9DB2B2E99328/OfficeDeploymentTool.exe"
 
-# Ajustar tamaño de la ventana de PowerShell
-function Ajustar-TamanoVentana {
-    $Width = 80
-    $Height = 30
-    $host.ui.RawUI.WindowSize = New-Object -TypeName System.Management.Automation.Host.Size -ArgumentList $Width, $Height
-    $host.ui.RawUI.BufferSize = New-Object -TypeName System.Management.Automation.Host.Size -ArgumentList $Width, 300
-}
-
-Ajustar-TamanoVentana
-
-# Permitir la ejecución del script sin restricciones en la sesión actual
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-
-# Configuración inicial
-$TempFolder = "$env:TEMP\MSOInstaller"
-if (-not (Test-Path -Path $TempFolder)) {
+# Paso 1: Crear carpeta temporal
+if (-Not (Test-Path -Path $TempFolder)) {
     New-Item -ItemType Directory -Path $TempFolder | Out-Null
-    Write-Host "Carpeta temporal creada: $TempFolder"
-} else {
-    Write-Host "Carpeta temporal ya existe: $TempFolder"
 }
 
-# Descargar Office Deployment Tool si no existe
-$ODTPath = Join-Path -Path $TempFolder -ChildPath "officedeploymenttool_18227-20162.exe"
-if (-not (Test-Path -Path $ODTPath)) {
-    Write-Host "Descargando Office Deployment Tool..."
-    $ODTUrl = "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_18227-20162.exe"
-    Invoke-WebRequest -Uri $ODTUrl -OutFile $ODTPath -UseBasicParsing
-    Write-Host "Descarga completa: $ODTPath"
-} else {
-    Write-Host "El archivo Office Deployment Tool ya existe: $ODTPath"
+# Paso 2: Descargar Office Deployment Tool (ODT)
+Write-Host "Descargando la herramienta de implementación de Office..."
+$ODT_File = "$TempFolder\OfficeDeploymentTool.exe"
+Invoke-WebRequest -Uri $ODT_URL -OutFile $ODT_File -ErrorAction Stop
+
+if (-Not (Test-Path -Path $ODT_File)) {
+    Write-Host "Error al descargar Office Deployment Tool. Verifica tu conexión a Internet." -ForegroundColor Red
+    Pause
+    Exit
 }
 
-# Extraer el contenido del instalador
-Write-Host "Extrayendo archivos de Office Deployment Tool..."
-Start-Process -FilePath $ODTPath -ArgumentList "/quiet /extract:$TempFolder" -NoNewWindow -Wait
-Write-Host "Extracción completa en: $TempFolder"
+# Paso 3: Extraer ODT
+Write-Host "Extrayendo la herramienta de implementación de Office..."
+Start-Process -FilePath $ODT_File -ArgumentList "/quiet /extract:$TempFolder" -NoNewWindow -Wait
 
-# Menú principal
-function Mostrar-Menu {
-    cls
-    Write-Host "=========================================="
-    Write-Host "    Instalador de Office - Menú Principal"
-    Write-Host "=========================================="
-    Write-Host "[1] Seleccionar versión de Office"
-    Write-Host "[2] Configurar idioma de instalación"
-    Write-Host "[3] Iniciar instalación de Office"
-    Write-Host "[0] Salir"
-    Write-Host "=========================================="
-    return Read-Host "Elige una opción"
-}
+# Paso 4: Solicitar opciones al usuario
+Write-Host "=================================================="
+Write-Host "Selecciona la version de Office que deseas instalar:" -ForegroundColor Cyan
+Write-Host "1. Office 2024 LTSC ProPlus (Volume)"
+Write-Host "2. Office 2021 LTSC ProPlus (Volume)"
+Write-Host "3. Office 2019 LTSC ProPlus (Volume)"
+$version = Read-Host "Ingresa el numero de tu opcion"
 
-# Variables globales
-$ProductID = $null
-$Channel = $null
-$Language = $null
-
-# Lógica del menú
-while ($true) {
-    $Opcion = Mostrar-Menu
-    switch ($Opcion) {
-        "1" {
-            Write-Host "`nSelecciona la versión de Office:"
-            Write-Host "[1] Office 2024"
-            Write-Host "[2] Office 2021"
-            Write-Host "[3] Office 2019"
-            $Version = Read-Host "Elige una opción (1, 2 o 3)"
-            switch ($Version) {
-                1 {
-                    $ProductID = "ProPlus2024Volume"
-                    $Channel = "PerpetualVL2024"
-                }
-                2 {
-                    $ProductID = "ProPlus2021Volume"
-                    $Channel = "PerpetualVL2021"
-                }
-                3 {
-                    $ProductID = "ProPlus2019Volume"
-                    $Channel = "PerpetualVL2019"
-                }
-                default {
-                    Mostrar-Error "Versión no válida. Usa 1, 2 o 3."
-                }
-            }
-            Write-Host "Configuración establecida: ProductID=$ProductID, Canal=$Channel" -ForegroundColor Cyan
-        }
-        "2" {
-            $Language = Read-Host "Ingresa el idioma (ejemplo: en-us para inglés, es-es para español)"
-            if (-not $Language) {
-                Mostrar-Error "No ingresaste un idioma válido."
-            } else {
-                Write-Host "Idioma configurado: $Language" -ForegroundColor Cyan
-            }
-        }
-        "3" {
-            if (-not $ProductID -or -not $Channel -or -not $Language) {
-                Mostrar-Error "Debes configurar la versión y el idioma antes de iniciar la instalación."
-            }
-
-            # Crear el archivo de configuración XML
-            $ConfigXMLPath = Join-Path -Path $TempFolder -ChildPath "Configuration.xml"
-            $ConfigXMLContent = @"
-<Configuration>
-    <Add OfficeClientEdition="64" Channel="$Channel">
-        <Product ID="$ProductID">
-            <Language ID="$Language" />
-        </Product>
-    </Add>
-    <Display Level="None" AcceptEULA="True" />
-    <Property Name="AUTOACTIVATE" Value="1" />
-</Configuration>
-"@
-            Set-Content -Path $ConfigXMLPath -Value $ConfigXMLContent
-            Write-Host "Archivo de configuración creado en: $ConfigXMLPath"
-
-            # Ejecutar la instalación de Office
-            $SetupExePath = Join-Path -Path $TempFolder -ChildPath "setup.exe"
-            if (Test-Path -Path $SetupExePath) {
-                Write-Host "Iniciando instalación de Office..."
-                Start-Process -FilePath $SetupExePath -ArgumentList "/configure $ConfigXMLPath" -NoNewWindow -Wait
-                Write-Host "Instalación completada."
-            } else {
-                Mostrar-Error "No se encontró setup.exe en $TempFolder. Verifica la extracción."
-            }
-        }
-        "0" {
-            Write-Host "Saliendo del instalador..." -ForegroundColor Green
-            break
-        }
-        default {
-            Write-Host "Opción no válida. Intenta de nuevo." -ForegroundColor Red
-        }
+switch ($version) {
+    "1" { $ProductID = "ProPlus2024Volume" }
+    "2" { $ProductID = "ProPlus2021Volume" }
+    "3" { $ProductID = "ProPlus2019Volume" }
+    default {
+        Write-Host "Opcion invalida. Saliendo..." -ForegroundColor Red
+        Exit
     }
 }
 
-Write-Host "El proceso ha finalizado correctamente."
+Write-Host "=================================================="
+Write-Host "Selecciona los programas que deseas instalar (separados por comas):" -ForegroundColor Cyan
+Write-Host "Word, Excel, PowerPoint, Outlook, Access, Publisher, Teams, OneDrive"
+Write-Host "Nota: Deja en blanco para instalar todos."
+$apps = Read-Host "Ingresa los programas"
+
+Write-Host "=================================================="
+Write-Host "Selecciona el idioma de instalación:" -ForegroundColor Cyan
+Write-Host "1. Español"
+Write-Host "2. Inglés"
+$idioma = Read-Host "Ingresa el numero de tu opcion"
+
+switch ($idioma) {
+    "1" { $LanguageID = "es-es" }
+    "2" { $LanguageID = "en-us" }
+    default {
+        Write-Host "Opcion invalida. Saliendo..." -ForegroundColor Red
+        Exit
+    }
+}
+
+# Paso 5: Crear archivo de configuración XML
+$ConfigFile = "$TempFolder\configuration.xml"
+Write-Host "Creando archivo de configuración..."
+
+$xmlContent = @"
+<Configuration>
+    <Add OfficeClientEdition="64" Channel="PerpetualVL2021">
+        <Product ID="$ProductID">
+"@
+
+if ($apps -ne "") {
+    $excludedApps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "Teams", "OneDrive") | Where-Object { $apps -notmatch $_ }
+    foreach ($app in $excludedApps) {
+        $xmlContent += "            <ExcludeApp ID=\"$app\" />`n"
+    }
+}
+
+$xmlContent += @"
+            <Language ID="$LanguageID" />
+        </Product>
+    </Add>
+    <Display Level="Full" AcceptEULA="TRUE" />
+    <Logging Name="install.log" Path="$TempFolder" Level="Standard" />
+</Configuration>
+"@
+
+Set-Content -Path $ConfigFile -Value $xmlContent
+
+# Paso 6: Iniciar la instalación de Office
+Write-Host "Iniciando instalación de Office..."
+Start-Process -FilePath "$TempFolder\setup.exe" -ArgumentList "/configure $ConfigFile" -NoNewWindow -Wait
+
+# Paso 7: Limpiar archivos temporales
+Write-Host "Eliminando archivos temporales..."
+Remove-Item -Path $TempFolder -Recurse -Force
+
+Write-Host "Instalación completada. ¡Disfruta tu nueva versión de Office!" -ForegroundColor Green
 Pause
