@@ -73,10 +73,40 @@ switch ($languageChoice) {
 # Selección de programas
 $apps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote")
 $selectedApps = @()
-Write-Host "Selecciona las aplicaciones a instalar. Escribe 'fin' cuando termines."
-foreach ($app in $apps) {
-    $include = Read-Host "¿Quieres incluir $app? (s/n)"
-    if ($include -eq 's') { $selectedApps += $app }
+
+Write-Host "Selecciona las aplicaciones a instalar. Escribe el número correspondiente y presiona Enter." -ForegroundColor Cyan
+Write-Host "Cuando termines, escribe 'fin' para finalizar la selección." -ForegroundColor Yellow
+
+do {
+    for ($i = 0; $i -lt $apps.Count; $i++) {
+        Write-Host "$($i + 1). $($apps[$i])"
+    }
+
+    $input = Read-Host "Escribe el número de la aplicación que deseas incluir (o 'fin' para terminar)"
+    
+    if ($input -match '^\d+$') {
+        $index = [int]$input - 1
+        if ($index -ge 0 -and $index -lt $apps.Count) {
+            $app = $apps[$index]
+            if ($selectedApps -contains $app) {
+                Write-Host "$app ya fue seleccionada." -ForegroundColor Red
+            } else {
+                $selectedApps += $app
+                Write-Host "$app añadida a la lista de instalación." -ForegroundColor Green
+            }
+        } else {
+            Write-Host "Número fuera de rango. Intenta nuevamente." -ForegroundColor Red
+        }
+    } elseif ($input -ne 'fin') {
+        Write-Host "Entrada inválida. Escribe un número válido o 'fin' para terminar." -ForegroundColor Red
+    }
+} while ($input -ne 'fin')
+
+if ($selectedApps.Count -eq 0) {
+    Write-Host "No seleccionaste ninguna aplicación. Se instalarán todas por defecto." -ForegroundColor Yellow
+    $selectedApps = $apps
+} else {
+    Write-Host "Se instalarán las siguientes aplicaciones: $($selectedApps -join ', ')" -ForegroundColor Cyan
 }
 
 # Generar el archivo de configuración
