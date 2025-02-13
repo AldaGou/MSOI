@@ -1,103 +1,99 @@
-# Carpeta temporal para trabajar
-$TempFolder = "$env:TEMP\OfficeSetup"
+# Este script debe ejecutarse en PowerShell como Administrador.
+# Descarga e instala Office LTSC basado en las opciones configuradas por el usuario.
 
-# URL oficial para descargar la herramienta de implementación de Office
-$ODT_URL = "https://download.microsoft.com/download/2/6/E/26E3AEDE-10B1-4B6C-B3C1-9DB2B2E99328/OfficeDeploymentTool.exe"
-
-# Paso 1: Crear carpeta temporal
-if (-Not (Test-Path -Path $TempFolder)) {
-    New-Item -ItemType Directory -Path $TempFolder | Out-Null
+# Verifica si es administrador
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    Write-Host "Por favor, ejecuta este script como Administrador." -ForegroundColor Red
+    exit
 }
 
-# Paso 2: Descargar Office Deployment Tool (ODT)
-Write-Host "Descargando la herramienta de implementación de Office..."
-$ODT_File = "$TempFolder\OfficeDeploymentTool.exe"
-Invoke-WebRequest -Uri $ODT_URL -OutFile $ODT_File -ErrorAction Stop
-
-if (-Not (Test-Path -Path $ODT_File)) {
-    Write-Host "Error al descargar Office Deployment Tool. Verifica tu conexión a Internet." -ForegroundColor Red
-    Pause
-    Exit
+# Función para mostrar una barra de progreso
+function Show-Progress {
+    param (
+        [int]$PercentComplete,
+        [string]$Activity,
+        [string]$Status
+    )
+    Write-Progress -Activity $Activity -Status $Status -PercentComplete $PercentComplete
 }
 
-# Paso 3: Extraer ODT
-Write-Host "Extrayendo la herramienta de implementación de Office..."
-Start-Process -FilePath $ODT_File -ArgumentList "/quiet /extract:$TempFolder" -NoNewWindow -Wait
+# Descarga el Office Deployment Tool (ODT)
+$odtUrl = "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_18227-20162.exe"
+$odtExe = "OfficeDeploymentTool.exe"
+$odtPath = Join-Path $env:Temp $odtExe
 
-# Paso 4: Solicitar opciones al usuario
-Write-Host "=================================================="
-Write-Host "Selecciona la version de Office que deseas instalar:" -ForegroundColor Cyan
-Write-Host "1. Office 2024 LTSC ProPlus (Volume)"
-Write-Host "2. Office 2021 LTSC ProPlus (Volume)"
-Write-Host "3. Office 2019 LTSC ProPlus (Volume)"
-$version = Read-Host "Ingresa el numero de tu opcion"
+Write-Host "Descargando Office Deployment Tool..." -ForegroundColor Yellow
+Invoke-WebRequest -Uri $odtUrl -OutFile $odtPath -UseBasicParsing -ErrorAction Stop -TimeoutSec 60
 
-switch ($version) {
-    "1" { $ProductID = "ProPlus2024Volume" }
-    "2" { $ProductID = "ProPlus2021Volume" }
-    "3" { $ProductID = "ProPlus2019Volume" }
-    default {
-        Write-Host "Opcion invalida. Saliendo..." -ForegroundColor Red
-        Exit
-    }
+Write-Host "Extrayendo archivos del Office Deployment Tool..." -ForegroundColor Yellow
+Start-Process -FilePath $odtPath -ArgumentList "/quiet /extract:$env:Temp\ODT" -Wait
+
+# Configuración inicial
+$officeConfigPath = Join-Path $env:Temp\ODT "configuration.xml"
+Write-Host "Generando configuración personalizada..." -ForegroundColor Cyan
+
+# Función para elegir opciones
+function Show-Menu {
+    param (
+        [string]$prompt,
+        [array]$options
+    )
+    $options | ForEach-Object { Write-Host "$($_.Index + 1). $_" }
+    do {
+        $choice = Read-Host $prompt
+    } while (-not ($choice -as [int]) -or $choice -le 0 -or $choice -gt $options.Count)
+    return $options[$choice - 1]
 }
 
-Write-Host "=================================================="
-Write-Host "Selecciona los programas que deseas instalar (separados por comas):" -ForegroundColor Cyan
-Write-Host "Word, Excel, PowerPoint, Outlook, Access, Publisher, Teams, OneDrive"
-Write-Host "Nota: Deja en blanco para instalar todos."
-$apps = Read-Host "Ingresa los programas"
+# Selección de versión
+$version = Show-Menu -prompt "Selecciona la versión de Office LTSC" -options @("Office LTSC 2024", "Office LTSC 2021", "Office LTSC 2019")
 
-Write-Host "=================================================="
-Write-Host "Selecciona el idioma de instalación:" -ForegroundColor Cyan
-Write-Host "1. Español"
-Write-Host "2. Inglés"
-$idioma = Read-Host "Ingresa el numero de tu opcion"
+# Selección de idioma
+$language = Show-Menu -prompt "Selecciona el idioma de Office" -options @("es-ES", "en-US", "fr-FR", "de-DE", "pt-BR")
 
-switch ($idioma) {
-    "1" { $LanguageID = "es-es" }
-    "2" { $LanguageID = "en-us" }
-    default {
-        Write-Host "Opcion invalida. Saliendo..." -ForegroundColor Red
-        Exit
-    }
+# Selección de programas
+$apps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote")
+$selectedApps = @()
+Write-Host "Selecciona las aplicaciones a instalar. Escribe 'fin' cuando termines."
+foreach ($app in $apps) {
+    $include = Read-Host "¿Quieres incluir $app? (s/n)"
+    if ($include -eq 's') { $selectedApps += $app }
 }
 
-# Paso 5: Crear archivo de configuración XML
-$ConfigFile = "$TempFolder\configuration.xml"
-Write-Host "Creando archivo de configuración..."
-
-$xmlContent = @"
+# Generar el archivo de configuración
+$config = @"
 <Configuration>
-    <Add OfficeClientEdition="64" Channel="PerpetualVL2021">
-        <Product ID="$ProductID">
+    <Add OfficeClientEdition="64" Channel="PerpetualVL${version -replace 'Office LTSC ', ''}">
+        <Product ID="ProPlus2021Volume">
+            <Language ID="$language" />
 "@
 
-if ($apps -ne "") {
-    $excludedApps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "Teams", "OneDrive") | Where-Object { $apps -notmatch $_ }
-    foreach ($app in $excludeApps) {
-    $xmlContent += "        <ExcludeApp ID=`"$app`" />`n"
+foreach ($app in $apps) {
+    if (-not ($selectedApps -contains $app)) {
+        $config += "            <ExcludeApp ID=""$app"" />`n"
+    }
 }
 
-
-$xmlContent += @"
-            <Language ID="$LanguageID" />
+$config += @"
         </Product>
     </Add>
     <Display Level="Full" AcceptEULA="TRUE" />
-    <Logging Name="install.log" Path="$TempFolder" Level="Standard" />
 </Configuration>
 "@
 
-Set-Content -Path $ConfigFile -Value $xmlContent
+Set-Content -Path $officeConfigPath -Value $config
+Write-Host "Archivo de configuración generado en: $officeConfigPath" -ForegroundColor Green
 
-# Paso 6: Iniciar la instalación de Office
-Write-Host "Iniciando instalación de Office..."
-Start-Process -FilePath "$TempFolder\setup.exe" -ArgumentList "/configure $ConfigFile" -NoNewWindow -Wait
+# Comenzar la instalación
+Write-Host "Iniciando la instalación de Office LTSC..." -ForegroundColor Yellow
 
-# Paso 7: Limpiar archivos temporales
-Write-Host "Eliminando archivos temporales..."
-Remove-Item -Path $TempFolder -Recurse -Force
+# Mostrar barra de progreso durante la instalación
+$steps = 100
+for ($i = 0; $i -le $steps; $i++) {
+    Show-Progress -PercentComplete $i -Activity "Instalando Office LTSC" -Status "Progreso: $i%"
+    Start-Sleep -Milliseconds 50
+}
 
-Write-Host "Instalación completada. ¡Disfruta tu nueva versión de Office!" -ForegroundColor Green
-Pause
+Start-Process -FilePath "$env:Temp\ODT\setup.exe" -ArgumentList "/configure $officeConfigPath" -Wait
+
+Write-Host "Instalación completada con éxito." -ForegroundColor Green
