@@ -83,11 +83,17 @@ switch ($languageChoice) {
 $apps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote", "OneDrive", "Lync", "Teams", "OutlookForWindows", "Bing", "Groove")
 Write-Host "Select the apps to install by entering the corresponding numbers separated by commas (e.g., 1,2,3):" -ForegroundColor Cyan
 
-# Mostrar en dos columnas
-for ($i = 0; $i -lt $apps.Count; $i += 2) {
-    $col1 = "$(($i + 1)). $($apps[$i])"
-    $col2 = if ($i + 1 -lt $apps.Count) { "$(($i + 2)). $($apps[$i + 1])" } else { "" }
-    Write-Host "$col1`t$col2"
+# Mostrar apps en dos columnas
+Write-Host "Select the apps to install by entering the corresponding numbers separated by commas (e.g., 1,2,3):" -ForegroundColor Cyan
+$appCount = $apps.Count
+$columnWidth = 25 # Ajusta este valor si necesitas más espacio
+
+for ($i = 0; $i -lt $appCount; $i += 2) {
+    $line = "{0,3}. {1,-$columnWidth}" -f ($i + 1), $apps[$i]
+    if ($i + 1 -lt $appCount) {
+        $line += "{0,3}. {1}" -f ($i + 2), $apps[$i + 1]
+    }
+    Write-Host $line
 }
 
 $appInput = Read-Host "Enter the numbers of the apps you want to install (or press Enter to install all by default)"
