@@ -1,6 +1,14 @@
-# Habilitar depuración y detener en errores
+# Habilitar manejo de errores estrictos
 $ErrorActionPreference = "Stop"
-Set-PSDebug -Trace 1
+
+# Función para manejar errores
+function Mostrar-Error {
+    param ($ErrorMessage)
+    Write-Host "`nERROR: $ErrorMessage" -ForegroundColor Red
+    Read-Host "Presiona Enter para cerrar el script"
+    Exit 1
+}
+
 
 # Permitir la ejecución del script sin restricciones en la sesión actual
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
