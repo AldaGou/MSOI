@@ -18,7 +18,7 @@ function Show-Progress {
 }
 
 # Descarga el Office Deployment Tool (ODT)
-$odtUrl = "https://aka.ms/ODT"
+$odtUrl = "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_18227-20162.exe"
 $odtExe = "OfficeDeploymentTool.exe"
 $odtPath = Join-Path $env:Temp $odtExe
 
