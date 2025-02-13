@@ -79,40 +79,37 @@ switch ($languageChoice) {
     }
 }
 
-# Selección de programas
+# Selección de programas con soporte para múltiples entradas
 $apps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote")
 $selectedApps = @()
 
-Write-Host "Selecciona las aplicaciones a instalar. Escribe el número correspondiente y presiona Enter." -ForegroundColor Cyan
-Write-Host "Cuando termines, escribe 'fin' para finalizar la selección." -ForegroundColor Yellow
+Write-Host "Selecciona las aplicaciones a instalar escribiendo los números separados por comas (ejemplo: 1,3,5)." -ForegroundColor Cyan
+Write-Host "1. Word"
+Write-Host "2. Excel"
+Write-Host "3. PowerPoint"
+Write-Host "4. Outlook"
+Write-Host "5. Access"
+Write-Host "6. Publisher"
+Write-Host "7. OneNote"
 
-do {
-    for ($i = 0; $i -lt $apps.Count; $i++) {
-        Write-Host "$($i + 1). $($apps[$i])"
-    }
+$input = Read-Host "Ingresa los números de las aplicaciones"
 
-    $input = Read-Host "Escribe el número de la aplicación que deseas incluir (o 'fin' para terminar)"
-    
-    if ($input -match '^\d+$') {
-        $index = [int]$input - 1
+try {
+    $indices = $input -split "," | ForEach-Object { [int]($_.Trim()) - 1 }
+    foreach ($index in $indices) {
         if ($index -ge 0 -and $index -lt $apps.Count) {
-            $app = $apps[$index]
-            if ($selectedApps -contains $app) {
-                Write-Host "$app ya fue seleccionada." -ForegroundColor Red
-            } else {
-                $selectedApps += $app
-                Write-Host "$app añadida a la lista de instalación." -ForegroundColor Green
-            }
+            $selectedApps += $apps[$index]
         } else {
-            Write-Host "Número fuera de rango. Intenta nuevamente." -ForegroundColor Red
+            Write-Host "Número $($index + 1) fuera de rango. Será ignorado." -ForegroundColor Yellow
         }
-    } elseif ($input -ne 'fin') {
-        Write-Host "Entrada inválida. Escribe un número válido o 'fin' para terminar." -ForegroundColor Red
     }
-} while ($input -ne 'fin')
+} catch {
+    Write-Host "Entrada inválida. Se instalarán todas las aplicaciones por defecto." -ForegroundColor Yellow
+    $selectedApps = $apps
+}
 
 if ($selectedApps.Count -eq 0) {
-    Write-Host "No seleccionaste ninguna aplicación. Se instalarán todas por defecto." -ForegroundColor Yellow
+    Write-Host "No seleccionaste ninguna aplicación válida. Se instalarán todas por defecto." -ForegroundColor Yellow
     $selectedApps = $apps
 } else {
     Write-Host "Se instalarán las siguientes aplicaciones: $($selectedApps -join ', ')" -ForegroundColor Cyan
@@ -121,7 +118,7 @@ if ($selectedApps.Count -eq 0) {
 # Generar el archivo de configuración
 $config = @"
 <Configuration>
-    <Add OfficeClientEdition="64" Channel=" $version">
+    <Add OfficeClientEdition="64" Channel="$version">
         <Product ID="$productID">
             <Language ID="$language" />
 "@
