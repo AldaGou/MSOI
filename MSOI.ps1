@@ -80,7 +80,7 @@ switch ($languageChoice) {
 }
 
 # Selección de programas
-$apps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote", "Skype", "OneDrive", "Lync")
+$apps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote", "OneDrive", "Lync", "Teams", "OutlookForWindows", "Bing", "Groove")
 Write-Host "Select the apps to install by entering the corresponding numbers separated by commas (e.g., 1,2,3):" -ForegroundColor Cyan
 
 for ($i = 0; $i -lt $apps.Count; $i++) {
