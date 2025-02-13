@@ -79,13 +79,6 @@ switch ($languageChoice) {
     }
 }
 
-# Lista de aplicaciones
-$apps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote", "OneDrive", "Lync", "Teams", "OutlookForWindows", "Bing", "Groove")
-
-# Calcular el número de filas para dividir las columnas
-$totalApps = $apps.Count
-$half = [math]::Ceiling($totalApps / 2)
-
 # Mostrar encabezado
 Write-Host "Select the apps to install by entering the corresponding numbers separated by commas (e.g., 1,2,3):" -ForegroundColor Cyan
 
@@ -100,7 +93,17 @@ for ($i = 0; $i -lt $half; $i++) {
     Write-Host "$leftApp $rightApp"
 }
 
-Write-Host "Enter the numbers of the apps you want to install (or press Enter to install all by default):"
+# Capturar las aplicaciones seleccionadas
+$appSelection = Read-Host "Enter the numbers of the apps you want to install (or press Enter to install all by default)"
+
+# Validar la selección
+if ([string]::IsNullOrWhiteSpace($appSelection)) {
+    Write-Host "No selection made. All apps will be installed by default." -ForegroundColor Yellow
+    $selectedApps = $apps
+} else {
+    $selectedIndices = $appSelection -split ',' | ForEach-Object { $_.Trim() -as [int] }
+    $selectedApps = $selectedIndices | ForEach-Object { $apps[$_ - 1] } # Convertir los números a nombres de apps
+}
 
 # Generar el archivo de configuración
 $config = @"
