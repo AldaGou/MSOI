@@ -1,5 +1,5 @@
 # This script must be run in PowerShell as Administrator.
-# Downloads and installs Office LTSC based on user-configured options.
+# Downloads and installs Office LTSC based on the user's selected options.
 
 # Check if running as administrator
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
@@ -7,7 +7,7 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     exit
 }
 
-# Function to display a progress bar
+# Function to show a progress bar
 function Show-Progress {
     param (
         [int]$PercentComplete,
@@ -22,18 +22,18 @@ $odtUrl = "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154
 $odtExe = "OfficeDeploymentTool.exe"
 $odtPath = Join-Path $env:Temp $odtExe
 
-Write-Host "Downloading Office Deployment Tool..." -ForegroundColor Yellow
+Write-Host "Downloading the Office Deployment Tool..." -ForegroundColor Yellow
 Invoke-WebRequest -Uri $odtUrl -OutFile $odtPath -UseBasicParsing -ErrorAction Stop -TimeoutSec 60
 
-Write-Host "Extracting Office Deployment Tool files..." -ForegroundColor Yellow
+Write-Host "Extracting files from the Office Deployment Tool..." -ForegroundColor Yellow
 Start-Process -FilePath $odtPath -ArgumentList "/quiet /extract:$env:Temp\ODT" -Wait
 
-# Initial configuration
+# Initial setup
 $officeConfigPath = Join-Path $env:Temp\ODT "configuration.xml"
-Write-Host "Generating custom configuration..." -ForegroundColor Cyan
+Write-Host "Generating a custom configuration..." -ForegroundColor Cyan
 
-# Version selection menu
-Write-Host "Select the version of Office LTSC:" -ForegroundColor Cyan
+# Menu to select version
+Write-Host "Select the Office LTSC version:" -ForegroundColor Green
 Write-Host "1. Office LTSC 2024"
 Write-Host "2. Office LTSC 2021"
 Write-Host "3. Office LTSC 2019"
@@ -53,13 +53,13 @@ switch ($versionChoice) {
         $productID = "ProPlus2019Volume"
     }
     default {
-        Write-Host "Invalid selection. Please run the script again and choose a valid option." -ForegroundColor Red
+        Write-Host "Invalid selection. Please run the script again and select a valid option." -ForegroundColor Red
         exit
     }
 }
 
-# Language selection menu
-Write-Host "Select the language for Office:" -ForegroundColor Cyan
+# Menu to select language
+Write-Host "Select the language for Office:" -ForegroundColor Green
 Write-Host "1. Spanish (es-ES)"
 Write-Host "2. English (en-US)"
 Write-Host "3. French (fr-FR)"
@@ -74,23 +74,23 @@ switch ($languageChoice) {
     "4" { $language = "de-DE" }
     "5" { $language = "pt-BR" }
     default {
-        Write-Host "Invalid selection. Please run the script again and choose a valid option." -ForegroundColor Red
+        Write-Host "Invalid selection. Please run the script again and select a valid option." -ForegroundColor Red
         exit
     }
 }
 
-# Program selection menu
+# Application selection
 $apps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote", "Skype", "OneDrive")
-Write-Host "Select the applications to install by entering the corresponding numbers separated by commas (e.g., 1,2,3)." -ForegroundColor Cyan
+Write-Host "Select the apps to install by entering the corresponding numbers separated by commas (e.g., 1,2,3):" -ForegroundColor Cyan
 
 for ($i = 0; $i -lt $apps.Count; $i++) {
     Write-Host "$($i + 1). $($apps[$i])"
 }
 
-$appInput = Read-Host "Enter the numbers of the applications you want to install (or press Enter to install all by default)"
+$appInput = Read-Host "Enter the numbers of the apps you want to install (or press Enter to install all by default)"
 
 if ([string]::IsNullOrWhiteSpace($appInput)) {
-    Write-Host "No applications selected. All will be installed by default." -ForegroundColor Yellow
+    Write-Host "No apps selected. All apps will be installed by default." -ForegroundColor Yellow
     $selectedApps = $apps
 } else {
     $selectedIndexes = $appInput -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ - 1 }
@@ -105,10 +105,10 @@ if ([string]::IsNullOrWhiteSpace($appInput)) {
     }
 
     if ($selectedApps.Count -eq 0) {
-        Write-Host "No valid applications selected. All will be installed by default." -ForegroundColor Yellow
+        Write-Host "No valid apps selected. All apps will be installed by default." -ForegroundColor Yellow
         $selectedApps = $apps
     } else {
-        Write-Host "The following applications will be installed: $($selectedApps -join ', ')" -ForegroundColor Cyan
+        Write-Host "The following apps will be installed: $($selectedApps -join ', ')" -ForegroundColor Cyan
     }
 }
 
@@ -140,7 +140,7 @@ Set-Content -Path $officeConfigPath -Value $config
 Write-Host "Configuration file generated at: $officeConfigPath" -ForegroundColor Green
 
 # Start the installation
-Write-Host "Starting the installation of Office LTSC..." -ForegroundColor Yellow
+Write-Host "Starting the Office LTSC installation..." -ForegroundColor Yellow
 
 Start-Process -FilePath "$env:Temp\ODT\setup.exe" -ArgumentList "/configure $officeConfigPath" -Wait
 
