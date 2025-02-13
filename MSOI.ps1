@@ -43,14 +43,20 @@ switch ($versionChoice) {
     "1" { 
         $version = "PerpetualVL2024"
         $productID = "ProPlus2024Volume"
+        $visioID = "VisioPro2024Volume"
+        $projectID = "ProjectPro2024Volume"
     }
     "2" { 
         $version = "PerpetualVL2021"
         $productID = "ProPlus2021Volume"
+        $visioID = "VisioPro2021Volume"
+        $projectID = "ProjectPro2021Volume"
     }
     "3" { 
         $version = "PerpetualVL2019"
         $productID = "ProPlus2019Volume"
+        $visioID = "VisioPro2019Volume"
+        $projectID = "ProjectPro2019Volume"
     }
     default {
         Write-Host "Invalid selection. Please run the script again and select a valid option." -ForegroundColor Red
@@ -80,7 +86,7 @@ switch ($languageChoice) {
 }
 
 # Definir las aplicaciones (Asegúrate de que esta lista esté correctamente declarada antes de usarla)
-$apps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote", "Skype for Business")
+$apps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote")
 
 # Total de aplicaciones y división para organización
 $totalApps = $apps.Count
@@ -126,12 +132,39 @@ foreach ($app in $apps) {
     }
 }
 
+if ($selectedProducts -contains "Project") {
+    $config += @"    <Add OfficeClientEdition="64" Channel="$version">
+        <Product ID="$projectID">
+            <Language ID="$language" />
+        </Product>
+    </Add>
+"@
+}
+
+if ($selectedProducts -contains "Visio") {
+    $config += @"    <Add OfficeClientEdition="64" Channel="$version">
+        <Product ID="$visioID">
+            <Language ID="$language" />
+        </Product>
+    </Add>
+"@
+}
+
+# Ensure Skype for Business is excluded
+$config += "            <ExcludeApp ID=\"Lync\" />`n"
+$config += "            <ExcludeApp ID=\"OneDrive\" />`n"
+$config += "            <ExcludeApp ID=\"Teams\" />`n"
+$config += "            <ExcludeApp ID=\"OutlookForWindows\" />`n"
+$config += "            <ExcludeApp ID=\"Bing\" />`n"
+$config += "            <ExcludeApp ID=\"Groove\" />`n"
+
 $config += @"
         </Product>
     </Add>
     <Display Level="Full" AcceptEULA="TRUE" />
 </Configuration>
 "@
+
 
 Set-Content -Path $officeConfigPath -Value $config
 Write-Host "Configuration file generated at: $officeConfigPath" -ForegroundColor Green
