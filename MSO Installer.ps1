@@ -1,3 +1,7 @@
+# Habilitar depuración y detener en errores
+$ErrorActionPreference = "Stop"
+Set-PSDebug -Trace 1
+
 # Permitir la ejecución del script sin restricciones en la sesión actual
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
