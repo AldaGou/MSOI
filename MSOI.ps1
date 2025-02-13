@@ -133,7 +133,7 @@ foreach ($app in $apps) {
 }
 
 if ($selectedProducts -contains "Project") {
-    $config += @"    <Add OfficeClientEdition="64" Channel="$version">
+    $config += @"
         <Product ID="$projectID">
             <Language ID="$language" />
         </Product>
@@ -142,7 +142,7 @@ if ($selectedProducts -contains "Project") {
 }
 
 if ($selectedProducts -contains "Visio") {
-    $config += @"    <Add OfficeClientEdition="64" Channel="$version">
+    $config += @"
         <Product ID="$visioID">
             <Language ID="$language" />
         </Product>
