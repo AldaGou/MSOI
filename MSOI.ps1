@@ -40,9 +40,18 @@ Write-Host "3. Office LTSC 2019"
 $versionChoice = Read-Host "Ingresa el número correspondiente"
 
 switch ($versionChoice) {
-    "1" { $version = "Office LTSC 2024" }
-    "2" { $version = "Office LTSC 2021" }
-    "3" { $version = "Office LTSC 2019" }
+    "1" { 
+        $version = "Office LTSC 2024"
+        $productID = "ProPlus2024Volume"
+    }
+    "2" { 
+        $version = "Office LTSC 2021"
+        $productID = "ProPlus2021Volume"
+    }
+    "3" { 
+        $version = "Office LTSC 2019"
+        $productID = "ProPlus2019Volume"
+    }
     default {
         Write-Host "Selección inválida. Ejecuta el script nuevamente y selecciona una opción válida." -ForegroundColor Red
         exit
@@ -104,6 +113,7 @@ do {
 
 if ($selectedApps.Count -eq 0) {
     Write-Host "No seleccionaste ninguna aplicación. Se instalarán todas por defecto." -ForegroundColor Yellow
+    $selectedApps = $apps
 } else {
     Write-Host "Se instalarán las siguientes aplicaciones: $($selectedApps -join ', ')" -ForegroundColor Cyan
 }
@@ -112,7 +122,7 @@ if ($selectedApps.Count -eq 0) {
 $config = @"
 <Configuration>
     <Add OfficeClientEdition="64" Channel="PerpetualVL${version -replace 'Office LTSC ', ''}">
-        <Product ID="ProPlus2021Volume">
+        <Product ID="$productID">
             <Language ID="$language" />
 "@
 
@@ -134,13 +144,6 @@ Write-Host "Archivo de configuración generado en: $officeConfigPath" -Foregroun
 
 # Comenzar la instalación
 Write-Host "Iniciando la instalación de Office LTSC..." -ForegroundColor Yellow
-
-# Mostrar barra de progreso durante la instalación
-$steps = 100
-for ($i = 0; $i -le $steps; $i++) {
-    Show-Progress -PercentComplete $i -Activity "Instalando Office LTSC" -Status "Progreso: $i%"
-    Start-Sleep -Milliseconds 50
-}
 
 Start-Process -FilePath "$env:Temp\ODT\setup.exe" -ArgumentList "/configure $officeConfigPath" -Wait
 
