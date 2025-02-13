@@ -26,7 +26,7 @@ if (-not (Test-Path -Path $TempFolder)) {
 $ODTPath = Join-Path -Path $TempFolder -ChildPath "OfficeDeploymentTool.exe"
 if (-not (Test-Path -Path $ODTPath)) {
     Write-Host "Descargando Office Deployment Tool..."
-    $ODTUrl = "https://go.microsoft.com/fwlink/p/?linkid=2085641"
+    $ODTUrl = "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_18227-20162.exe"
     Invoke-WebRequest -Uri $ODTUrl -OutFile $ODTPath
     Write-Host "Descarga completa: $ODTPath"
 } else {
