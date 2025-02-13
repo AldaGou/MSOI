@@ -41,15 +41,15 @@ $versionChoice = Read-Host "Ingresa el número correspondiente"
 
 switch ($versionChoice) {
     "1" { 
-        $version = "Office LTSC 2024"
+        $version = "PerpetualVL2024"
         $productID = "ProPlus2024Volume"
     }
     "2" { 
-        $version = "Office LTSC 2021"
+        $version = "PerpetualVL2021"
         $productID = "ProPlus2021Volume"
     }
     "3" { 
-        $version = "Office LTSC 2019"
+        $version = "PerpetualVL2019"
         $productID = "ProPlus2019Volume"
     }
     default {
@@ -121,7 +121,7 @@ if ($selectedApps.Count -eq 0) {
 # Generar el archivo de configuración
 $config = @"
 <Configuration>
-    <Add OfficeClientEdition="64" Channel="PerpetualVL${version -replace 'Office LTSC ', ''}">
+    <Add OfficeClientEdition="64" Channel=" $version">
         <Product ID="$productID">
             <Language ID="$language" />
 "@
