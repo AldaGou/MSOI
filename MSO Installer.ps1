@@ -1,77 +1,105 @@
 # Configuración inicial
 $ErrorActionPreference = "Stop"
 
-function MostrarMenu {
+function MostrarMenuVersion {
     Clear-Host
     Write-Host "===================================" -ForegroundColor Cyan
-    Write-Host "            Office Installer       " -ForegroundColor Cyan
+    Write-Host "        Office Installer           " -ForegroundColor Cyan
     Write-Host "===================================" -ForegroundColor Cyan
-    Write-Host "[1] Instalar Office 2024 Volume"
-    Write-Host "[2] Instalar Office 2021 Volume"
-    Write-Host "[3] Instalar Office 2019 Volume"
-    Write-Host "[4] Cambiar idioma de instalación"
-    Write-Host "[5] Salir"
+    Write-Host "[1] Office 2024 Volume"
+    Write-Host "[2] Office 2021 Volume"
+    Write-Host "[3] Office 2019 Volume"
+    Write-Host "[4] Salir"
     Write-Host "===================================" -ForegroundColor Cyan
 }
 
-function ElegirOpcion {
+function ElegirVersion {
     param (
         [string]$Mensaje
     )
     Write-Host "`n$Mensaje"
-    return Read-Host "Elige una opción"
+    return Read-Host "Elige una versión (1-4)"
 }
 
-function CambiarIdioma {
-    Write-Host "`nIdiomas disponibles:" -ForegroundColor Yellow
+function MostrarMenuIdioma {
+    Clear-Host
+    Write-Host "===================================" -ForegroundColor Cyan
+    Write-Host "        Selección de Idioma        " -ForegroundColor Cyan
+    Write-Host "===================================" -ForegroundColor Cyan
     Write-Host "[1] Español (es-es)"
     Write-Host "[2] Inglés (en-us)"
     Write-Host "[3] Francés (fr-fr)"
-    $opcionIdioma = Read-Host "Selecciona el idioma (1-3)"
-    switch ($opcionIdioma) {
-        1 { return "es-es" }
-        2 { return "en-us" }
-        3 { return "fr-fr" }
-        default {
-            Write-Host "Opción no válida, se usará Inglés por defecto."
-            return "en-us"
-        }
-    }
+    Write-Host "[4] Volver al menú principal"
+    Write-Host "===================================" -ForegroundColor Cyan
 }
 
-# Variables de configuración
-$Idioma = "en-us"
+function ElegirIdioma {
+    param (
+        [string]$Mensaje
+    )
+    Write-Host "`n$Mensaje"
+    return Read-Host "Selecciona el idioma (1-4)"
+}
+
+function ConfirmarInstalacion {
+    Write-Host "`nHas seleccionado:" -ForegroundColor Yellow
+    Write-Host "Versión de Office: $SeleccionVersion"
+    Write-Host "Idioma: $SeleccionIdioma"
+    Write-Host "===================================" -ForegroundColor Cyan
+    $confirmar = Read-Host "¿Deseas iniciar la instalación? (S/N)"
+    return $confirmar
+}
+
+# Variables para selección
+$SeleccionVersion = ""
+$SeleccionIdioma = ""
 
 do {
-    MostrarMenu
-    $opcion = ElegirOpcion "Selecciona una opción (1-5)"
-    switch ($opcion) {
-        1 {
-            Write-Host "Iniciando instalación de Office 2024 Volume con idioma $Idioma..."
-            # Aquí iría la lógica de instalación para Office 2024 Volume
-            Pause
-        }
-        2 {
-            Write-Host "Iniciando instalación de Office 2021 Volume con idioma $Idioma..."
-            # Aquí iría la lógica de instalación para Office 2021 Volume
-            Pause
-        }
-        3 {
-            Write-Host "Iniciando instalación de Office 2019 Volume con idioma $Idioma..."
-            # Aquí iría la lógica de instalación para Office 2019 Volume
-            Pause
-        }
-        4 {
-            $Idioma = CambiarIdioma
-            Write-Host "Idioma cambiado a $Idioma."
-            Pause
-        }
-        5 {
-            Write-Host "Saliendo del instalador. ¡Hasta pronto!" -ForegroundColor Green
-            break
-        }
+    MostrarMenuVersion
+    $opcionVersion = ElegirVersion "Selecciona la versión de Office que deseas instalar"
+    switch ($opcionVersion) {
+        1 { $SeleccionVersion = "Office 2024 Volume" }
+        2 { $SeleccionVersion = "Office 2021 Volume" }
+        3 { $SeleccionVersion = "Office 2019 Volume" }
+        4 { break }
         default {
             Write-Host "Opción no válida. Intenta de nuevo." -ForegroundColor Red
+            Pause
+            continue
         }
     }
-} while ($opcion -ne 5)
+
+    if ($opcionVersion -ne 4) {
+        do {
+            MostrarMenuIdioma
+            $opcionIdioma = ElegirIdioma "Selecciona el idioma para la instalación"
+            switch ($opcionIdioma) {
+                1 { $SeleccionIdioma = "es-es" }
+                2 { $SeleccionIdioma = "en-us" }
+                3 { $SeleccionIdioma = "fr-fr" }
+                4 { break }
+                default {
+                    Write-Host "Opción no válida. Intenta de nuevo." -ForegroundColor Red
+                    Pause
+                    continue
+                }
+            }
+
+            if ($opcionIdioma -ne 4) {
+                $confirmar = ConfirmarInstalacion
+                if ($confirmar -match "^[sS]$") {
+                    Write-Host "Iniciando instalación de $SeleccionVersion en idioma $SeleccionIdioma..." -ForegroundColor Green
+                    # Aquí puedes añadir la lógica de instalación
+                    Pause
+                    break
+                } else {
+                    Write-Host "Instalación cancelada. Regresando al menú principal." -ForegroundColor Red
+                    Pause
+                    break
+                }
+            }
+        } while ($opcionIdioma -ne 4)
+    }
+} while ($opcionVersion -ne 4)
+
+Write-Host "Saliendo del instalador. ¡Hasta pronto!" -ForegroundColor Green
