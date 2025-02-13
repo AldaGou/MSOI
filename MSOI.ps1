@@ -1,13 +1,13 @@
-# This script must be run in PowerShell as Administrator.
-# Downloads and installs Office LTSC based on the user's selected options.
+# Este script debe ejecutarse en PowerShell como Administrador.
+# Descarga e instala Office LTSC basado en las opciones configuradas por el usuario.
 
-# Check if running as administrator
+# Verifica si es administrador
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
     Write-Host "Please run this script as Administrator." -ForegroundColor Red
     exit
 }
 
-# Function to show a progress bar
+# Función para mostrar una barra de progreso
 function Show-Progress {
     param (
         [int]$PercentComplete,
@@ -17,7 +17,7 @@ function Show-Progress {
     Write-Progress -Activity $Activity -Status $Status -PercentComplete $PercentComplete
 }
 
-# Download the Office Deployment Tool (ODT)
+# Descarga el Office Deployment Tool (ODT)
 $odtUrl = "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_18227-20162.exe"
 $odtExe = "OfficeDeploymentTool.exe"
 $odtPath = Join-Path $env:Temp $odtExe
@@ -28,12 +28,12 @@ Invoke-WebRequest -Uri $odtUrl -OutFile $odtPath -UseBasicParsing -ErrorAction S
 Write-Host "Extracting files from the Office Deployment Tool..." -ForegroundColor Yellow
 Start-Process -FilePath $odtPath -ArgumentList "/quiet /extract:$env:Temp\ODT" -Wait
 
-# Initial setup
+# Configuración inicial
 $officeConfigPath = Join-Path $env:Temp\ODT "configuration.xml"
 Write-Host "Generating a custom configuration..." -ForegroundColor Cyan
 
-# Menu to select version
-Write-Host "Select the Office LTSC version:" -ForegroundColor Green
+# Menú para seleccionar versión
+Write-Host "Select the Office LTSC version:"
 Write-Host "1. Office LTSC 2024"
 Write-Host "2. Office LTSC 2021"
 Write-Host "3. Office LTSC 2019"
@@ -58,8 +58,8 @@ switch ($versionChoice) {
     }
 }
 
-# Menu to select language
-Write-Host "Select the language for Office:" -ForegroundColor Green
+# Menú para seleccionar idioma
+Write-Host "Select the language for Office:"
 Write-Host "1. Spanish (es-ES)"
 Write-Host "2. English (en-US)"
 Write-Host "3. French (fr-FR)"
@@ -79,8 +79,8 @@ switch ($languageChoice) {
     }
 }
 
-# Application selection
-$apps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote", "Skype", "OneDrive")
+# Selección de programas
+$apps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote", "Skype", "OneDrive", "Lync")
 Write-Host "Select the apps to install by entering the corresponding numbers separated by commas (e.g., 1,2,3):" -ForegroundColor Cyan
 
 for ($i = 0; $i -lt $apps.Count; $i++) {
@@ -112,7 +112,7 @@ if ([string]::IsNullOrWhiteSpace($appInput)) {
     }
 }
 
-# Generate the configuration file
+# Generar el archivo de configuración
 $config = @"
 <Configuration>
     <Add OfficeClientEdition="64" Channel="$version">
@@ -122,12 +122,9 @@ $config = @"
 
 foreach ($app in $apps) {
     if (-not ($selectedApps -contains $app)) {
-        $config += "            <ExcludeApp ID=\"$app\" />`n"
+        $config += "            <ExcludeApp ID=""$app"" />n"
     }
 }
-
-# Ensure Skype for Business is excluded
-$config += "            <ExcludeApp ID=\"Lync\" />`n"
 
 $config += @"
         </Product>
@@ -138,8 +135,7 @@ $config += @"
 
 Set-Content -Path $officeConfigPath -Value $config
 Write-Host "Configuration file generated at: $officeConfigPath" -ForegroundColor Green
-
-# Start the installation
+# Comenzar la instalación
 Write-Host "Starting the Office LTSC installation..." -ForegroundColor Yellow
 
 Start-Process -FilePath "$env:Temp\ODT\setup.exe" -ArgumentList "/configure $officeConfigPath" -Wait
