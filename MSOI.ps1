@@ -104,7 +104,6 @@ do {
 
 if ($selectedApps.Count -eq 0) {
     Write-Host "No seleccionaste ninguna aplicación. Se instalarán todas por defecto." -ForegroundColor Yellow
-    $selectedApps = $apps
 } else {
     Write-Host "Se instalarán las siguientes aplicaciones: $($selectedApps -join ', ')" -ForegroundColor Cyan
 }
