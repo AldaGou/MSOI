@@ -75,10 +75,10 @@ $xmlContent = @"
 
 if ($apps -ne "") {
     $excludedApps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "Teams", "OneDrive") | Where-Object { $apps -notmatch $_ }
-    foreach ($app in $excludedApps) {
-        $xmlContent += "            <ExcludeApp ID=\"$app\" />`n"
-    }
+    foreach ($app in $excludeApps) {
+    $xmlContent += "        <ExcludeApp ID=`"$app`" />`n"
 }
+
 
 $xmlContent += @"
             <Language ID="$LanguageID" />
