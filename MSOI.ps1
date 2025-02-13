@@ -79,47 +79,28 @@ switch ($languageChoice) {
     }
 }
 
-# Selección de programas
+# Lista de aplicaciones
 $apps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote", "OneDrive", "Lync", "Teams", "OutlookForWindows", "Bing", "Groove")
+
+# Calcular el número de filas para dividir las columnas
+$totalApps = $apps.Count
+$half = [math]::Ceiling($totalApps / 2)
+
+# Mostrar encabezado
 Write-Host "Select the apps to install by entering the corresponding numbers separated by commas (e.g., 1,2,3):" -ForegroundColor Cyan
 
-# Mostrar apps en dos columnas
-Write-Host "Select the apps to install by entering the corresponding numbers separated by commas (e.g., 1,2,3):" -ForegroundColor Cyan
-$appCount = $apps.Count
-$columnWidth = 25 # Ajusta este valor si necesitas más espacio
+# Mostrar las aplicaciones organizadas
+for ($i = 0; $i -lt $half; $i++) {
+    $leftIndex = $i + 1
+    $rightIndex = $i + $half + 1
 
-for ($i = 0; $i -lt $appCount; $i += 2) {
-    $line = "{0,3}. {1,-$columnWidth}" -f ($i + 1), $apps[$i]
-    if ($i + 1 -lt $appCount) {
-        $line += "{0,3}. {1}" -f ($i + 2), $apps[$i + 1]
-    }
-    Write-Host $line
-}
-
-$appInput = Read-Host "Enter the numbers of the apps you want to install (or press Enter to install all by default)"
-
-if ([string]::IsNullOrWhiteSpace($appInput)) {
-    Write-Host "No apps selected. All apps will be installed by default." -ForegroundColor Yellow
-    $selectedApps = $apps
-} else {
-    $selectedIndexes = $appInput -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ - 1 }
-    $selectedApps = @()
+    $leftApp = "{0,3}. {1,-15}" -f $leftIndex, $apps[$i]
+    $rightApp = if ($rightIndex -le $totalApps) { "{0,3}. {1}" -f $rightIndex, $apps[$rightIndex - 1] } else { "" }
     
-    foreach ($index in $selectedIndexes) {
-        if ($index -ge 0 -and $index -lt $apps.Count) {
-            $selectedApps += $apps[$index]
-        } else {
-            Write-Host "Number out of range: $($index + 1). Ignoring this value." -ForegroundColor Red
-        }
-    }
-
-    if ($selectedApps.Count -eq 0) {
-        Write-Host "No valid apps selected. All apps will be installed by default." -ForegroundColor Yellow
-        $selectedApps = $apps
-    } else {
-        Write-Host "The following apps will be installed: $($selectedApps -join ', ')" -ForegroundColor Cyan
-    }
+    Write-Host "$leftApp $rightApp"
 }
+
+Write-Host "Enter the numbers of the apps you want to install (or press Enter to install all by default):"
 
 # Generar el archivo de configuración
 $config = @"
