@@ -79,6 +79,13 @@ switch ($languageChoice) {
     }
 }
 
+# Definir las aplicaciones (Asegúrate de que esta lista esté correctamente declarada antes de usarla)
+$apps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote", "Skype for Business")
+
+# Total de aplicaciones y división para organización
+$totalApps = $apps.Count
+$half = [math]::Ceiling($totalApps / 2)
+
 # Mostrar encabezado
 Write-Host "Select the apps to install by entering the corresponding numbers separated by commas (e.g., 1,2,3):" -ForegroundColor Cyan
 
