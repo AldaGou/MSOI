@@ -81,41 +81,35 @@ switch ($languageChoice) {
 
 # Selección de programas
 $apps = @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote", "Skype", "OneDrive")
-$selectedApps = @()
+Write-Host "Selecciona las aplicaciones a instalar escribiendo los números correspondientes separados por comas (por ejemplo, 1,2,3)." -ForegroundColor Cyan
 
-Write-Host "Selecciona las aplicaciones a instalar. Escribe el número correspondiente y presiona Enter." -ForegroundColor Cyan
-Write-Host "Cuando termines, escribe 'fin' para finalizar la selección." -ForegroundColor Yellow
+for ($i = 0; $i -lt $apps.Count; $i++) {
+    Write-Host "$($i + 1). $($apps[$i])"
+}
 
-do {
-    for ($i = 0; $i -lt $apps.Count; $i++) {
-        Write-Host "$($i + 1). $($apps[$i])"
-    }
+$appInput = Read-Host "Ingresa los números de las aplicaciones que deseas instalar (o presiona Enter para instalar todas por defecto)"
 
-    $input = Read-Host "Escribe el número de la aplicación que deseas incluir (o 'fin' para terminar)"
-    
-    if ($input -match '^\d+$') {
-        $index = [int]$input - 1
-        if ($index -ge 0 -and $index -lt $apps.Count) {
-            $app = $apps[$index]
-            if ($selectedApps -contains $app) {
-                Write-Host "$app ya fue seleccionada." -ForegroundColor Red
-            } else {
-                $selectedApps += $app
-                Write-Host "$app añadida a la lista de instalación." -ForegroundColor Green
-            }
-        } else {
-            Write-Host "Número fuera de rango. Intenta nuevamente." -ForegroundColor Red
-        }
-    } elseif ($input -ne 'fin') {
-        Write-Host "Entrada inválida. Escribe un número válido o 'fin' para terminar." -ForegroundColor Red
-    }
-} while ($input -ne 'fin')
-
-if ($selectedApps.Count -eq 0) {
+if ([string]::IsNullOrWhiteSpace($appInput)) {
     Write-Host "No seleccionaste ninguna aplicación. Se instalarán todas por defecto." -ForegroundColor Yellow
     $selectedApps = $apps
 } else {
-    Write-Host "Se instalarán las siguientes aplicaciones: $($selectedApps -join ', ')" -ForegroundColor Cyan
+    $selectedIndexes = $appInput -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ - 1 }
+    $selectedApps = @()
+    
+    foreach ($index in $selectedIndexes) {
+        if ($index -ge 0 -and $index -lt $apps.Count) {
+            $selectedApps += $apps[$index]
+        } else {
+            Write-Host "Número fuera de rango: $($index + 1). Ignorando este valor." -ForegroundColor Red
+        }
+    }
+
+    if ($selectedApps.Count -eq 0) {
+        Write-Host "No seleccionaste ninguna aplicación válida. Se instalarán todas por defecto." -ForegroundColor Yellow
+        $selectedApps = $apps
+    } else {
+        Write-Host "Se instalarán las siguientes aplicaciones: $($selectedApps -join ', ')" -ForegroundColor Cyan
+    }
 }
 
 # Generar el archivo de configuración
@@ -132,6 +126,9 @@ foreach ($app in $apps) {
     }
 }
 
+# Asegúrate de excluir Skype Empresarial
+$config += "            <ExcludeApp ID=""Lync"" />`n"
+
 $config += @"
         </Product>
     </Add>
@@ -141,7 +138,6 @@ $config += @"
 
 Set-Content -Path $officeConfigPath -Value $config
 Write-Host "Archivo de configuración generado en: $officeConfigPath" -ForegroundColor Green
-
 # Comenzar la instalación
 Write-Host "Iniciando la instalación de Office LTSC..." -ForegroundColor Yellow
 
