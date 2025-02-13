@@ -1,105 +1,148 @@
-# Configuración inicial
+# Habilitar manejo de errores estrictos
 $ErrorActionPreference = "Stop"
 
-function MostrarMenuVersion {
-    Clear-Host
-    Write-Host "===================================" -ForegroundColor Cyan
-    Write-Host "        Office Installer           " -ForegroundColor Cyan
-    Write-Host "===================================" -ForegroundColor Cyan
-    Write-Host "[1] Office 2024 Volume"
-    Write-Host "[2] Office 2021 Volume"
-    Write-Host "[3] Office 2019 Volume"
-    Write-Host "[4] Salir"
-    Write-Host "===================================" -ForegroundColor Cyan
+# Función para manejar errores
+function Mostrar-Error {
+    param ($ErrorMessage)
+    Write-Host "`nERROR: $ErrorMessage" -ForegroundColor Red
+    Read-Host "Presiona Enter para cerrar el script"
+    Exit 1
 }
 
-function ElegirVersion {
-    param (
-        [string]$Mensaje
-    )
-    Write-Host "`n$Mensaje"
-    return Read-Host "Elige una versión (1-4)"
+# Ajustar tamaño de la ventana de PowerShell
+function Ajustar-TamanoVentana {
+    $Width = 80
+    $Height = 30
+    $host.ui.RawUI.WindowSize = New-Object -TypeName System.Management.Automation.Host.Size -ArgumentList $Width, $Height
+    $host.ui.RawUI.BufferSize = New-Object -TypeName System.Management.Automation.Host.Size -ArgumentList $Width, 300
 }
 
-function MostrarMenuIdioma {
-    Clear-Host
-    Write-Host "===================================" -ForegroundColor Cyan
-    Write-Host "        Selección de Idioma        " -ForegroundColor Cyan
-    Write-Host "===================================" -ForegroundColor Cyan
-    Write-Host "[1] Español (es-es)"
-    Write-Host "[2] Inglés (en-us)"
-    Write-Host "[3] Francés (fr-fr)"
-    Write-Host "[4] Volver al menú principal"
-    Write-Host "===================================" -ForegroundColor Cyan
+Ajustar-TamanoVentana
+
+# Permitir la ejecución del script sin restricciones en la sesión actual
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+
+# Configuración inicial
+$TempFolder = "$env:TEMP\MSOInstaller"
+if (-not (Test-Path -Path $TempFolder)) {
+    New-Item -ItemType Directory -Path $TempFolder | Out-Null
+    Write-Host "Carpeta temporal creada: $TempFolder"
+} else {
+    Write-Host "Carpeta temporal ya existe: $TempFolder"
 }
 
-function ElegirIdioma {
-    param (
-        [string]$Mensaje
-    )
-    Write-Host "`n$Mensaje"
-    return Read-Host "Selecciona el idioma (1-4)"
+# Descargar Office Deployment Tool si no existe
+$ODTPath = Join-Path -Path $TempFolder -ChildPath "officedeploymenttool_18227-20162.exe"
+if (-not (Test-Path -Path $ODTPath)) {
+    Write-Host "Descargando Office Deployment Tool..."
+    $ODTUrl = "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_18227-20162.exe"
+    Invoke-WebRequest -Uri $ODTUrl -OutFile $ODTPath -UseBasicParsing -ProgressAction Show
+    Write-Host "Descarga completa: $ODTPath"
+} else {
+    Write-Host "El archivo Office Deployment Tool ya existe: $ODTPath"
 }
 
-function ConfirmarInstalacion {
-    Write-Host "`nHas seleccionado:" -ForegroundColor Yellow
-    Write-Host "Versión de Office: $SeleccionVersion"
-    Write-Host "Idioma: $SeleccionIdioma"
-    Write-Host "===================================" -ForegroundColor Cyan
-    $confirmar = Read-Host "¿Deseas iniciar la instalación? (S/N)"
-    return $confirmar
+# Extraer el contenido del instalador
+Write-Host "Extrayendo archivos de Office Deployment Tool..."
+Start-Process -FilePath $ODTPath -ArgumentList "/quiet /extract:$TempFolder" -NoNewWindow -Wait
+Write-Host "Extracción completa en: $TempFolder"
+
+# Menú principal
+function Mostrar-Menu {
+    cls
+    Write-Host "=========================================="
+    Write-Host "    Instalador de Office - Menú Principal"
+    Write-Host "=========================================="
+    Write-Host "[1] Seleccionar versión de Office"
+    Write-Host "[2] Configurar idioma de instalación"
+    Write-Host "[3] Iniciar instalación de Office"
+    Write-Host "[0] Salir"
+    Write-Host "=========================================="
+    return Read-Host "Elige una opción"
 }
 
-# Variables para selección
-$SeleccionVersion = ""
-$SeleccionIdioma = ""
+# Variables globales
+$ProductID = $null
+$Channel = $null
+$Language = $null
 
-do {
-    MostrarMenuVersion
-    $opcionVersion = ElegirVersion "Selecciona la versión de Office que deseas instalar"
-    switch ($opcionVersion) {
-        1 { $SeleccionVersion = "Office 2024 Volume" }
-        2 { $SeleccionVersion = "Office 2021 Volume" }
-        3 { $SeleccionVersion = "Office 2019 Volume" }
-        4 { break }
+# Lógica del menú
+while ($true) {
+    $Opcion = Mostrar-Menu
+    switch ($Opcion) {
+        "1" {
+            Write-Host "`nSelecciona la versión de Office:"
+            Write-Host "[1] Office 2024"
+            Write-Host "[2] Office 2021"
+            Write-Host "[3] Office 2019"
+            $Version = Read-Host "Elige una opción (1, 2 o 3)"
+            switch ($Version) {
+                1 {
+                    $ProductID = "ProPlus2024Volume"
+                    $Channel = "PerpetualVL2024"
+                }
+                2 {
+                    $ProductID = "ProPlus2021Volume"
+                    $Channel = "PerpetualVL2021"
+                }
+                3 {
+                    $ProductID = "ProPlus2019Volume"
+                    $Channel = "PerpetualVL2019"
+                }
+                default {
+                    Mostrar-Error "Versión no válida. Usa 1, 2 o 3."
+                }
+            }
+            Write-Host "Configuración establecida: ProductID=$ProductID, Canal=$Channel" -ForegroundColor Cyan
+        }
+        "2" {
+            $Language = Read-Host "Ingresa el idioma (ejemplo: en-us para inglés, es-es para español)"
+            if (-not $Language) {
+                Mostrar-Error "No ingresaste un idioma válido."
+            } else {
+                Write-Host "Idioma configurado: $Language" -ForegroundColor Cyan
+            }
+        }
+        "3" {
+            if (-not $ProductID -or -not $Channel -or -not $Language) {
+                Mostrar-Error "Debes configurar la versión y el idioma antes de iniciar la instalación."
+            }
+
+            # Crear el archivo de configuración XML
+            $ConfigXMLPath = Join-Path -Path $TempFolder -ChildPath "Configuration.xml"
+            $ConfigXMLContent = @"
+<Configuration>
+    <Add OfficeClientEdition="64" Channel="$Channel">
+        <Product ID="$ProductID">
+            <Language ID="$Language" />
+        </Product>
+    </Add>
+    <Display Level="None" AcceptEULA="True" />
+    <Property Name="AUTOACTIVATE" Value="1" />
+</Configuration>
+"@
+            Set-Content -Path $ConfigXMLPath -Value $ConfigXMLContent
+            Write-Host "Archivo de configuración creado en: $ConfigXMLPath"
+
+            # Ejecutar la instalación de Office
+            $SetupExePath = Join-Path -Path $TempFolder -ChildPath "setup.exe"
+            if (Test-Path -Path $SetupExePath) {
+                Write-Host "Iniciando instalación de Office..."
+                Start-Process -FilePath $SetupExePath -ArgumentList "/configure $ConfigXMLPath" -NoNewWindow -Wait
+                Write-Host "Instalación completada."
+            } else {
+                Mostrar-Error "No se encontró setup.exe en $TempFolder. Verifica la extracción."
+            }
+        }
+        "0" {
+            Write-Host "Saliendo del instalador..." -ForegroundColor Green
+            break
+        }
         default {
             Write-Host "Opción no válida. Intenta de nuevo." -ForegroundColor Red
-            Pause
-            continue
         }
     }
+}
 
-    if ($opcionVersion -ne 4) {
-        do {
-            MostrarMenuIdioma
-            $opcionIdioma = ElegirIdioma "Selecciona el idioma para la instalación"
-            switch ($opcionIdioma) {
-                1 { $SeleccionIdioma = "es-es" }
-                2 { $SeleccionIdioma = "en-us" }
-                3 { $SeleccionIdioma = "fr-fr" }
-                4 { break }
-                default {
-                    Write-Host "Opción no válida. Intenta de nuevo." -ForegroundColor Red
-                    Pause
-                    continue
-                }
-            }
-
-            if ($opcionIdioma -ne 4) {
-                $confirmar = ConfirmarInstalacion
-                if ($confirmar -match "^[sS]$") {
-                    Write-Host "Iniciando instalación de $SeleccionVersion en idioma $SeleccionIdioma..." -ForegroundColor Green
-                    # Aquí puedes añadir la lógica de instalación
-                    Pause
-                    break
-                } else {
-                    Write-Host "Instalación cancelada. Regresando al menú principal." -ForegroundColor Red
-                    Pause
-                    break
-                }
-            }
-        } while ($opcionIdioma -ne 4)
-    }
-} while ($opcionVersion -ne 4)
-
-Write-Host "Saliendo del instalador. ¡Hasta pronto!" -ForegroundColor Green
+Write-Host "El proceso ha finalizado correctamente."
+Pause
