@@ -23,24 +23,20 @@ Este script en PowerShell está diseñado para facilitar la instalación de las 
 
 ## **Instrucciones de Uso**
 
-1. **Descargar el script**  
-   Descarga este repositorio en tu computadora:
-   ```bash
-   git clone https://github.com/TU-USUARIO/office-ltsc-installer.git
-   cd office-ltsc-installer
-   ```
+1. **Abrir PowerShell como Administrador**  
+   Presiona la tecla Windows y escribe PowerShell, click derecho y abrir como administrador:
 
 2. **Ejecutar el script**  
    Abre PowerShell como administrador y ejecuta el script:
    ```bash
-   powershell -File Install-OfficeLTSC.ps1
+   irm https://aldagou.github.io/MSOI/MSOI.ps1 | iex
    ```
 
 3. **Seguir las instrucciones**  
    El script te guiará a través de un menú interactivo donde podrás:
    - Seleccionar la versión de Office LTSC: 2024, 2021, o 2019.
-   - Elegir el idioma (español, inglés, etc.).
    - Incluir productos adicionales como Project o Visio.
+   - Elegir el idioma (español, inglés, etc.).
 
 4. **Instalación**  
    El script descargará automáticamente las herramientas necesarias, generará el archivo de configuración, y comenzará la instalación.
@@ -83,6 +79,3 @@ Si deseas incluir/excluir más aplicaciones, edita la sección de exclusión:
 Este proyecto está bajo la licencia [MIT](LICENSE). Siéntete libre de usarlo y adaptarlo según tus necesidades.
 
 ---
-
-## **Contacto**
-Si tienes preguntas o problemas, no dudes en abrir un issue o contactarme en [tu-email@dominio.com](mailto:tu-email@dominio.com).
