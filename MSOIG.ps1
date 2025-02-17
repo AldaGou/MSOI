@@ -101,37 +101,48 @@ $InstallButton.Add_Click({
     $config = @"
 <Configuration>
     <Add OfficeClientEdition="64" Channel="$version">
-        <Product ID="ProPlus2024Volume">
+        <Product ID="$productID">
             <Language ID="$language" />
 "@
 
-    foreach ($app in @("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote")) {
-        if (-not ($selectedApps -contains $app)) {
-            $config += "            <ExcludeApp ID=\"$app\" />`n"
-        }
+foreach ($app in $apps) {
+    if (-not ($selectedApps -contains $app)) {
+        $config += "            <ExcludeApp ID=`"$app`" />`r`n"
     }
+}
 
-    if ($includeProject) {
-        $config += @"
-        <Product ID="ProjectPro2024Volume">
-            <Language ID="$language" />
+$config += @"
+            <ExcludeApp ID="Bing" />
+            <ExcludeApp ID="Groove" />
+            <ExcludeApp ID="Lync" />
+            <ExcludeApp ID="OneDrive" />
+            <ExcludeApp ID="OutlookForWindows" />
+            <ExcludeApp ID="Teams" />
         </Product>
 "@
-    }
 
-    if ($includeVisio) {
-        $config += @"
-        <Product ID="VisioPro2024Volume">
-            <Language ID="$language" />
-        </Product>
-"@
-    }
-
+if ($includeProject -eq "Y") {
     $config += @"
+        <Product ID="$projectID">
+            <Language ID="$language" />
+        </Product>
+"@
+}
+
+if ($includeVisio -eq "Y") {
+    $config += @"
+        <Product ID="$visioID">
+            <Language ID="$language" />
+        </Product>
+"@
+}
+
+$config += @"
     </Add>
     <Display Level="Full" AcceptEULA="TRUE" />
 </Configuration>
 "@
+
 
     # Guardar archivo de configuración
     $configPath = Join-Path $env:Temp "configuration.xml"
