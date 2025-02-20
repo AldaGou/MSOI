@@ -79,7 +79,6 @@ $buttonInstall.Add_Click({
         return
     }
 
-    # Aquí puedes añadir la lógica para descargar y configurar Office LTSC basado en las selecciones del usuario.
     # Variables definidas según la versión seleccionada
     switch ($version) {
         "Office LTSC 2024" { 
