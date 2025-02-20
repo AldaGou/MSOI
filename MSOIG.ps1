@@ -80,6 +80,28 @@ $buttonInstall.Add_Click({
     }
 
     # Aquí puedes añadir la lógica para descargar y configurar Office LTSC basado en las selecciones del usuario.
+    # Variables definidas según la versión seleccionada
+    switch ($version) {
+        "Office LTSC 2024" { 
+            $version = "PerpetualVL2024"
+            $productID = "ProPlus2024Volume"
+            $visioID = "VisioPro2024Volume"
+            $projectID = "ProjectPro2024Volume"
+        }
+        "Office LTSC 2021" { 
+            $version = "PerpetualVL2021"
+            $productID = "ProPlus2021Volume"
+            $visioID = "VisioPro2021Volume"
+            $projectID = "ProjectPro2021Volume"
+        }
+        "Office LTSC 2019" { 
+            $version = "PerpetualVL2019"
+            $productID = "ProPlus2019Volume"
+            $visioID = "VisioPro2019Volume"
+            $projectID = "ProjectPro2019Volume"
+        }
+    }
+
     $odtUrl = "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_18227-20162.exe"
     $odtExe = "OfficeDeploymentTool.exe"
     $odtPath = Join-Path $env:Temp $odtExe
