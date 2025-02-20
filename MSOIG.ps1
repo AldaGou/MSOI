@@ -1,157 +1,138 @@
-# Este script crea una interfaz gráfica para configurar e instalar Office LTSC usando PowerShell.
+# Este script debe ejecutarse en PowerShell como Administrador.
+# Descarga e instala Office LTSC basado en las opciones configuradas por el usuario.
 
-Add-Type -AssemblyName PresentationFramework
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
 
-# Crear la ventana principal
-[xml]$xaml = @"
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Office LTSC Installer" Height="450" Width="600" WindowStartupLocation="CenterScreen">
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+# Verifica si es administrador
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    [System.Windows.Forms.MessageBox]::Show("Por favor, ejecuta este script como Administrador.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+    exit
+}
 
-        <!-- Selección de versión -->
-        <GroupBox Header="Select Office LTSC Version" Margin="0,10,0,0">
-            <StackPanel>
-                <RadioButton Name="Version2024" Content="Office LTSC 2024" GroupName="Version" IsChecked="True" />
-                <RadioButton Name="Version2021" Content="Office LTSC 2021" GroupName="Version" />
-                <RadioButton Name="Version2019" Content="Office LTSC 2019" GroupName="Version" />
-            </StackPanel>
-        </GroupBox>
+# Crear formulario
+$form = New-Object System.Windows.Forms.Form
+$form.Text = "Instalador de Office LTSC"
+$form.Size = New-Object System.Drawing.Size(400, 600)
+$form.StartPosition = "CenterScreen"
 
-        <!-- Selección de idioma -->
-        <GroupBox Header="Select Language" Margin="0,100,0,0">
-            <ComboBox Name="LanguageDropdown" SelectedIndex="0">
-                <ComboBoxItem Content="Spanish (es-ES)" />
-                <ComboBoxItem Content="English (en-US)" />
-                <ComboBoxItem Content="French (fr-FR)" />
-                <ComboBoxItem Content="German (de-DE)" />
-                <ComboBoxItem Content="Brazilian Portuguese (pt-BR)" />
-            </ComboBox>
-        </GroupBox>
+# Crear controles
+$labelVersion = New-Object System.Windows.Forms.Label
+$labelVersion.Text = "Selecciona la versión de Office LTSC:"
+$labelVersion.Location = New-Object System.Drawing.Point(10, 20)
+$form.Controls.Add($labelVersion)
 
-        <!-- Selección de productos -->
-        <GroupBox Header="Select Additional Products" Margin="0,200,0,0">
-            <StackPanel>
-                <CheckBox Name="IncludeProject" Content="Include Project" />
-                <CheckBox Name="IncludeVisio" Content="Include Visio" />
-            </StackPanel>
-        </GroupBox>
+$comboVersion = New-Object System.Windows.Forms.ComboBox
+$comboVersion.Items.AddRange(@("Office LTSC 2024", "Office LTSC 2021", "Office LTSC 2019"))
+$comboVersion.Location = New-Object System.Drawing.Point(10, 50)
+$form.Controls.Add($comboVersion)
 
-        <!-- Selección de aplicaciones -->
-        <GroupBox Header="Select Applications" Grid.Row="1" Margin="0,10,0,0">
-            <StackPanel>
-                <CheckBox Name="AppWord" Content="Word" IsChecked="True" />
-                <CheckBox Name="AppExcel" Content="Excel" IsChecked="True" />
-                <CheckBox Name="AppPowerPoint" Content="PowerPoint" IsChecked="True" />
-                <CheckBox Name="AppOutlook" Content="Outlook" IsChecked="True" />
-                <CheckBox Name="AppAccess" Content="Access" />
-                <CheckBox Name="AppPublisher" Content="Publisher" />
-                <CheckBox Name="AppOneNote" Content="OneNote" IsChecked="True" />
-            </StackPanel>
-        </GroupBox>
+$labelLanguage = New-Object System.Windows.Forms.Label
+$labelLanguage.Text = "Selecciona el idioma de Office:"
+$labelLanguage.Location = New-Object System.Drawing.Point(10, 90)
+$form.Controls.Add($labelLanguage)
 
-        <!-- Botón de instalación -->
-        <Button Name="InstallButton" Content="Install" Grid.Row="2" Margin="0,10,0,0" HorizontalAlignment="Center" Width="100" />
+$comboLanguage = New-Object System.Windows.Forms.ComboBox
+$comboLanguage.Items.AddRange(@("Spanish (es-ES)", "English (en-US)", "French (fr-FR)", "German (de-DE)", "Brazilian Portuguese (pt-BR)"))
+$comboLanguage.Location = New-Object System.Drawing.Point(10, 120)
+$form.Controls.Add($comboLanguage)
 
-    </Grid>
-</Window>
-"@
+$checkProject = New-Object System.Windows.Forms.CheckBox
+$checkProject.Text = "Incluir Project"
+$checkProject.Location = New-Object System.Drawing.Point(10, 160)
+$form.Controls.Add($checkProject)
 
-# Cargar el XAML
-$reader = (New-Object System.Xml.XmlNodeReader $xaml)
-$window = [Windows.Markup.XamlReader]::Load($reader)
+$checkVisio = New-Object System.Windows.Forms.CheckBox
+$checkVisio.Text = "Incluir Visio"
+$checkVisio.Location = New-Object System.Drawing.Point(10, 190)
+$form.Controls.Add($checkVisio)
 
-# Asignar eventos a los controles
-$InstallButton = $window.FindName("InstallButton")
-$LanguageDropdown = $window.FindName("LanguageDropdown")
+$labelApps = New-Object System.Windows.Forms.Label
+$labelApps.Text = "Selecciona las aplicaciones a instalar:"
+$labelApps.Location = New-Object System.Drawing.Point(10, 230)
+$form.Controls.Add($labelApps)
 
-$InstallButton.Add_Click({
-    # Obtener la versión seleccionada
-    $version = if ($window.Version2024.IsChecked) {
-        "PerpetualVL2024"
-    } elseif ($window.Version2021.IsChecked) {
-        "PerpetualVL2021"
-    } elseif ($window.Version2019.IsChecked) {
-        "PerpetualVL2019"
+$listBoxApps = New-Object System.Windows.Forms.CheckedListBox
+$listBoxApps.Items.AddRange(@("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote"))
+$listBoxApps.Location = New-Object System.Drawing.Point(10, 260)
+$listBoxApps.Size = New-Object System.Drawing.Size(200, 100)
+$form.Controls.Add($listBoxApps)
+
+$buttonInstall = New-Object System.Windows.Forms.Button
+$buttonInstall.Text = "Instalar"
+$buttonInstall.Location = New-Object System.Drawing.Point(10, 380)
+$form.Controls.Add($buttonInstall)
+
+# Función para manejar el clic del botón
+$buttonInstall.Add_Click({
+    $version = $comboVersion.SelectedItem
+    $language = $comboLanguage.SelectedItem
+    $includeProject = $checkProject.Checked
+    $includeVisio = $checkVisio.Checked
+    $selectedApps = @()
+    foreach ($item in $listBoxApps.CheckedItems) {
+        $selectedApps += $item
     }
 
-    # Obtener el idioma seleccionado
-    $language = $LanguageDropdown.SelectedItem.Content -split " \(" | Select-Object -First 1
+    if (-not $version -or -not $language) {
+        [System.Windows.Forms.MessageBox]::Show("Por favor, selecciona la versión y el idioma de Office.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+        return
+    }
 
-    # Verificar productos adicionales
-    $includeProject = $window.IncludeProject.IsChecked
-    $includeVisio = $window.IncludeVisio.IsChecked
+    # Aquí puedes añadir la lógica para descargar y configurar Office LTSC basado en las selecciones del usuario.
+    $odtUrl = "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_18227-20162.exe"
+    $odtExe = "OfficeDeploymentTool.exe"
+    $odtPath = Join-Path $env:Temp $odtExe
+    
+    Invoke-WebRequest -Uri $odtUrl -OutFile $odtPath -UseBasicParsing -ErrorAction Stop -TimeoutSec 60
+    Start-Process -FilePath $odtPath -ArgumentList "/quiet /extract:$env:Temp\ODT" -Wait
 
-    # Verificar aplicaciones seleccionadas
-    $selectedApps = @()
-    if ($window.AppWord.IsChecked) { $selectedApps += "Word" }
-    if ($window.AppExcel.IsChecked) { $selectedApps += "Excel" }
-    if ($window.AppPowerPoint.IsChecked) { $selectedApps += "PowerPoint" }
-    if ($window.AppOutlook.IsChecked) { $selectedApps += "Outlook" }
-    if ($window.AppAccess.IsChecked) { $selectedApps += "Access" }
-    if ($window.AppPublisher.IsChecked) { $selectedApps += "Publisher" }
-    if ($window.AppOneNote.IsChecked) { $selectedApps += "OneNote" }
-
-    # Generar archivo de configuración
+    $officeConfigPath = Join-Path $env:Temp\ODT "configuration.xml"
+    
     $config = @"
 <Configuration>
     <Add OfficeClientEdition="64" Channel="$version">
         <Product ID="$productID">
             <Language ID="$language" />
 "@
-
-foreach ($app in $apps) {
-    if (-not ($selectedApps -contains $app)) {
-        $config += "            <ExcludeApp ID=`"$app`" />`r`n"
+    
+    foreach ($app in $listBoxApps.Items) {
+        if (-not ($selectedApps -contains $app)) {
+            $config += "            <ExcludeApp ID=""$app"" />`n"
+        }
     }
-}
-
-$config += @"
-            <ExcludeApp ID="Bing" />
-            <ExcludeApp ID="Groove" />
-            <ExcludeApp ID="Lync" />
-            <ExcludeApp ID="OneDrive" />
-            <ExcludeApp ID="OutlookForWindows" />
-            <ExcludeApp ID="Teams" />
+    
+    $config += @"
         </Product>
 "@
-
-if ($includeProject -eq "Y") {
-    $config += @"
+    
+    if ($includeProject) {
+        $config += @"
         <Product ID="$projectID">
             <Language ID="$language" />
         </Product>
 "@
-}
-
-if ($includeVisio -eq "Y") {
-    $config += @"
+    }
+    
+    if ($includeVisio) {
+        $config += @"
         <Product ID="$visioID">
             <Language ID="$language" />
         </Product>
 "@
-}
+    }
 
-$config += @"
+    $config += @"
     </Add>
     <Display Level="Full" AcceptEULA="TRUE" />
 </Configuration>
 "@
-
-
-    # Guardar archivo de configuración
-    $configPath = Join-Path $env:Temp "configuration.xml"
-    Set-Content -Path $configPath -Value $config
-
-    [System.Windows.MessageBox]::Show("Configuration file generated at: $configPath", "Success")
-
-    # Aquí puedes añadir la lógica para iniciar la instalación
+    
+    Set-Content -Path $officeConfigPath -Value $config
+    
+    Start-Process -FilePath "$env:Temp\ODT\setup.exe" -ArgumentList "/configure $officeConfigPath" -Wait
+    [System.Windows.Forms.MessageBox]::Show("Instalación completada con éxito.", "Información", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 })
 
-# Mostrar la ventana
-$window.ShowDialog()
+# Mostrar formulario
+$form.ShowDialog()
