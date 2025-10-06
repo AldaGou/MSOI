@@ -1,126 +1,244 @@
-# Este script agrega una interfaz gráfica (GUI) para configurar e instalar Office LTSC
-# Ejecutar como Administrador en PowerShell
+#requires -Version 5.1
+<#
+    Office LTSC Installer GUI
+    - Descarga ODT (URL evergreen + fallback)
+    - Genera configuration.xml
+    - Ejecuta instalación
+    - Muestra estado/detección y log
+#>
 
-Add-Type -AssemblyName PresentationFramework
+#region Elevación a Administrador
+function Ensure-Elevated {
+    $isAdmin = ([Security.Principal.WindowsPrincipal] `
+        [Security.Principal.WindowsIdentity]::GetCurrent()
+    ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
-function Show-GUI {
-    [void][System.Reflection.Assembly]::LoadWithPartialName('System.Drawing')
-    [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
-
-    $form = New-Object System.Windows.Forms.Form
-    $form.Text = "Office LTSC Installer"
-    $form.Size = New-Object System.Drawing.Size(400, 500)
-    $form.StartPosition = "CenterScreen"
-
-    # Etiqueta para selección de versión
-    $versionLabel = New-Object System.Windows.Forms.Label
-    $versionLabel.Text = "Select Office LTSC Version:"
-    $versionLabel.Location = New-Object System.Drawing.Point(10, 20)
-    $form.Controls.Add($versionLabel)
-
-    # Dropdown para versión
-    $versionComboBox = New-Object System.Windows.Forms.ComboBox
-    $versionComboBox.Items.AddRange(@("Office LTSC 2024", "Office LTSC 2021", "Office LTSC 2019"))
-    $versionComboBox.Location = New-Object System.Drawing.Point(10, 50)
-    $versionComboBox.Width = 350
-    $form.Controls.Add($versionComboBox)
-
-    # Etiqueta para idioma
-    $languageLabel = New-Object System.Windows.Forms.Label
-    $languageLabel.Text = "Select Language:"
-    $languageLabel.Location = New-Object System.Drawing.Point(10, 100)
-    $form.Controls.Add($languageLabel)
-
-    # Dropdown para idioma
-    $languageComboBox = New-Object System.Windows.Forms.ComboBox
-    $languageComboBox.Items.AddRange(@("Spanish (es-ES)", "English (en-US)", "French (fr-FR)", "German (de-DE)", "Brazilian Portuguese (pt-BR)"))
-    $languageComboBox.Location = New-Object System.Drawing.Point(10, 130)
-    $languageComboBox.Width = 350
-    $form.Controls.Add($languageComboBox)
-
-    # Checkboxes para Project y Visio
-    $projectCheckbox = New-Object System.Windows.Forms.CheckBox
-    $projectCheckbox.Text = "Include Project"
-    $projectCheckbox.Location = New-Object System.Drawing.Point(10, 180)
-    $form.Controls.Add($projectCheckbox)
-
-    $visioCheckbox = New-Object System.Windows.Forms.CheckBox
-    $visioCheckbox.Text = "Include Visio"
-    $visioCheckbox.Location = New-Object System.Drawing.Point(10, 210)
-    $form.Controls.Add($visioCheckbox)
-
-    # Etiqueta para seleccionar apps
-    $appsLabel = New-Object System.Windows.Forms.Label
-    $appsLabel.Text = "Select Apps to Install:"
-    $appsLabel.Location = New-Object System.Drawing.Point(10, 260)
-    $form.Controls.Add($appsLabel)
-
-    # ListBox para seleccionar apps
-    $appsListBox = New-Object System.Windows.Forms.CheckedListBox
-    $appsListBox.Items.AddRange(@("Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote"))
-    $appsListBox.Location = New-Object System.Drawing.Point(10, 290)
-    $appsListBox.Size = New-Object System.Drawing.Size(350, 100)
-    $form.Controls.Add($appsListBox)
-
-    # Botón para iniciar
-    $startButton = New-Object System.Windows.Forms.Button
-    $startButton.Text = "Start Installation"
-    $startButton.Location = New-Object System.Drawing.Point(10, 420)
-    $startButton.Width = 350
-    $form.Controls.Add($startButton)
-
-    # Acción del botón
-    $startButton.Add_Click({
-        $versionChoice = $versionComboBox.SelectedItem
-        $languageChoice = $languageComboBox.SelectedItem
-        $includeProject = $projectCheckbox.Checked
-        $includeVisio = $visioCheckbox.Checked
-        $selectedApps = $appsListBox.CheckedItems
-
-        if (-not $versionChoice -or -not $languageChoice) {
-            [System.Windows.Forms.MessageBox]::Show("Please select a version and language.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
-            return
+    if (-not $isAdmin) {
+        Write-Host "Reiniciando como Administrador..."
+        if ($PSCommandPath) {
+            Start-Process -FilePath "powershell.exe" `
+                -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" `
+                -Verb RunAs
+        } else {
+            Start-Process -FilePath "powershell.exe" -Verb RunAs
         }
+        exit
+    }
+}
+Ensure-Elevated
+#endregion
 
-        # Mapeo de las selecciones
-        $versionMap = @{ "Office LTSC 2024" = "PerpetualVL2024"; "Office LTSC 2021" = "PerpetualVL2021"; "Office LTSC 2019" = "PerpetualVL2019" }
-        $productMap = @{ "Office LTSC 2024" = "ProPlus2024Volume"; "Office LTSC 2021" = "ProPlus2021Volume"; "Office LTSC 2019" = "ProPlus2019Volume" }
-        $visioMap = @{ "Office LTSC 2024" = "VisioPro2024Volume"; "Office LTSC 2021" = "VisioPro2021Volume"; "Office LTSC 2019" = "VisioPro2019Volume" }
-        $projectMap = @{ "Office LTSC 2024" = "ProjectPro2024Volume"; "Office LTSC 2021" = "ProjectPro2021Volume"; "Office LTSC 2019" = "ProjectPro2019Volume" }
+#region Utilidades
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+$ErrorActionPreference = 'Stop'
+$global:LogPath = Join-Path $env:TEMP ("OfficeLTSC-GUI_{0:yyyyMMdd_HHmmss}.log" -f (Get-Date))
+Start-Transcript -Path $global:LogPath -Append | Out-Null
 
-        $version = $versionMap[$versionChoice]
-        $productID = $productMap[$versionChoice]
-        $visioID = $visioMap[$versionChoice]
-        $projectID = $projectMap[$versionChoice]
-        $language = ($languageChoice -split ' ')[1]
+# Forzar TLS moderno
+try {
+    [Net.ServicePointManager]::SecurityProtocol = `
+        [Net.SecurityProtocolType]::Tls12 -bor `
+        [Net.SecurityProtocolType]::Tls13
+} catch {}
 
-        # Generar archivo de configuración
-        $config = "<Configuration>\n    <Add OfficeClientEdition=\"64\" Channel=\"$version\">\n        <Product ID=\"$productID\">\n            <Language ID=\"$language\" />\n"
-        foreach ($app in "Word", "Excel", "PowerPoint", "Outlook", "Access", "Publisher", "OneNote") {
-            if (-not $selectedApps.Contains($app)) {
-                $config += "            <ExcludeApp ID=\"$app\" />\n"
-            }
-        }
-        $config += "        </Product>\n"
-        if ($includeProject) {
-            $config += "        <Product ID=\"$projectID\">\n            <Language ID=\"$language\" />\n        </Product>\n"
-        }
-        if ($includeVisio) {
-            $config += "        <Product ID=\"$visioID\">\n            <Language ID=\"$language\" />\n        </Product>\n"
-        }
-        $config += "    </Add>\n    <Display Level=\"Full\" AcceptEULA=\"TRUE\" />\n</Configuration>"
-
-        $configPath = Join-Path $env:Temp "configuration.xml"
-        Set-Content -Path $configPath -Value $config
-
-        # Ejecutar instalación
-        Start-Process -FilePath "$env:Temp\ODT\setup.exe" -ArgumentList "/configure $configPath" -Wait
-        [System.Windows.Forms.MessageBox]::Show("Installation completed successfully.", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
-        $form.Close()
-    })
-
-    $form.ShowDialog()
+function Write-Log($msg) {
+    $stamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+    "$stamp  $msg" | Add-Content -Path $global:LogPath
 }
 
-# Ejecutar GUI
-Show-GUI
+function Test-Internet {
+    try {
+        $r = Invoke-WebRequest -Uri "https://www.microsoft.com" -Method Head -TimeoutSec 10
+        return ($r.StatusCode -ge 200 -and $r.StatusCode -lt 400)
+    } catch { return $false }
+}
+
+function Get-OfficeState {
+    $result = [ordered]@{
+        ClickToRun = $null
+        MSI        = $false
+        Arch       = $null
+        Channel    = $null
+        ProductIDs = @()
+    }
+    try {
+        $c2r = Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Office\ClickToRun\Configuration' -ErrorAction Stop
+        $result.ClickToRun = $true
+        $result.Arch       = $c2r.Platform
+        $result.Channel    = $c2r.UpdateChannel
+        if ($c2r.ProductReleaseIds) {
+            $result.ProductIDs = $c2r.ProductReleaseIds -split '\s*,\s*'
+        }
+    } catch {
+        $result.ClickToRun = $false
+    }
+
+    # Detección muy básica de MSI (queda a criterio confirmar/mostrar)
+    try {
+        $msiKeys = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+                   "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+        foreach ($k in $msiKeys) {
+            Get-ChildItem $k -ErrorAction SilentlyContinue | ForEach-Object {
+                $dn = (Get-ItemProperty $_.PsPath -ErrorAction SilentlyContinue).DisplayName
+                if ($dn -and $dn -match 'Microsoft Office(?! Click-to-Run)|Visio|Project') {
+                    $result.MSI = $true
+                }
+            }
+        }
+    } catch {}
+    return $result
+}
+
+function Get-ProductMap {
+    # Mapa de IDs por versión
+    return @{
+        "LTSC 2024" = @{
+            Channel   = "PerpetualVL2024"
+            Office    = "ProPlus2024Volume"
+            Visio     = "VisioPro2024Volume"
+            Project   = "ProjectPro2024Volume"
+        }
+        "LTSC 2021" = @{
+            Channel   = "PerpetualVL2021"
+            Office    = "ProPlus2021Volume"
+            Visio     = "VisioPro2021Volume"
+            Project   = "ProjectPro2021Volume"
+        }
+        "LTSC 2019" = @{
+            Channel   = "PerpetualVL2019"
+            Office    = "ProPlus2019Volume"
+            Visio     = "VisioPro2019Volume"
+            Project   = "ProjectPro2019Volume"
+        }
+    }
+}
+
+function New-OfficeConfigXml {
+    param(
+        [ValidateSet("32","64")] [string]$Edition = "64",
+        [Parameter(Mandatory)]   [string]$Channel,
+        [Parameter(Mandatory)]   [string]$ProductId,
+        [Parameter(Mandatory)]   [string]$Language,
+        [string[]]               $IncludeApps = @("Word","Excel","PowerPoint","Outlook","Access","Publisher","OneNote"),
+        [switch]                 $IncludeVisio,
+        [switch]                 $IncludeProject,
+        [string]                 $VisioId,
+        [string]                 $ProjectId,
+        [switch]                 $RemoveMSI,
+        [ValidateSet("None","Basic","Full")] [string]$DisplayLevel = "Full"
+    )
+    # Apps válidas conocidas para ExcludeApp
+    $knownApps = @("Access","Excel","OneNote","Outlook","PowerPoint","Publisher","Teams","Word","OneDrive","Groove","Lync")
+
+    $allOfficeApps = @("Word","Excel","PowerPoint","Outlook","Access","Publisher","OneNote")
+    $exclude = $allOfficeApps | Where-Object { $_ -notin $IncludeApps }
+
+    $xml = New-Object System.Text.StringBuilder
+    [void]$xml.AppendLine('<Configuration>')
+    [void]$xml.AppendLine("  <Add OfficeClientEdition=""$Edition"" Channel=""$Channel"">")
+    [void]$xml.AppendLine("    <Product ID=""$ProductId"">")
+    [void]$xml.AppendLine("      <Language ID=""$Language"" />")
+
+    foreach($app in $exclude) {
+        if ($knownApps -contains $app) {
+            [void]$xml.AppendLine("      <ExcludeApp ID=""$app"" />")
+        }
+    }
+
+    # Exclusiones adicionales típicas (opcionales)
+    foreach($extra in @("Teams","OneDrive","Groove","Lync")) {
+        if ($extra -notin $IncludeApps -and $knownApps -contains $extra) {
+            [void]$xml.AppendLine("      <ExcludeApp ID=""$extra"" />")
+        }
+    }
+
+    [void]$xml.AppendLine("    </Product>")
+
+    if ($IncludeProject -and $ProjectId) {
+        [void]$xml.AppendLine("    <Product ID=""$ProjectId"">")
+        [void]$xml.AppendLine("      <Language ID=""$Language"" />")
+        [void]$xml.AppendLine("    </Product>")
+    }
+    if ($IncludeVisio -and $VisioId) {
+        [void]$xml.AppendLine("    <Product ID=""$VisioId"">")
+        [void]$xml.AppendLine("      <Language ID=""$Language"" />")
+        [void]$xml.AppendLine("    </Product>")
+    }
+
+    [void]$xml.AppendLine("  </Add>")
+    if ($RemoveMSI) {
+        [void]$xml.AppendLine("  <RemoveMSI />")
+    }
+    [void]$xml.AppendLine("  <Display Level=""$DisplayLevel"" AcceptEULA=""TRUE"" />")
+    [void]$xml.AppendLine('</Configuration>')
+    return $xml.ToString()
+}
+
+function Get-ODT {
+    param(
+        [Parameter(Mandatory)] [string]$ExtractTo
+    )
+    $temp     = $env:TEMP
+    $exePath  = Join-Path $temp "OfficeDeploymentTool.exe"
+    $primary  = "https://aka.ms/ODT" # evergreen
+    $fallback = "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_18227-20162.exe"
+
+    New-Item -ItemType Directory -Path $ExtractTo -Force | Out-Null
+
+    Write-Log "Descargando ODT..."
+    $downloaded = $false
+    foreach ($url in @($primary,$fallback)) {
+        try {
+            Invoke-WebRequest -Uri $url -OutFile $exePath -TimeoutSec 180
+            $downloaded = $true
+            Write-Log "ODT descargado desde: $url"
+            break
+        } catch {
+            Write-Log "Fallo descarga ODT desde $url : $($_.Exception.Message)"
+        }
+    }
+    if (-not $downloaded) {
+        throw "No se pudo descargar ODT. Revisa tu conexión o proxy."
+    }
+
+    Write-Log "Extrayendo ODT a $ExtractTo"
+    Start-Process -FilePath $exePath -ArgumentList "/quiet /extract:`"$ExtractTo`"" -Wait
+    $setup = Join-Path $ExtractTo "setup.exe"
+    if (-not (Test-Path $setup)) {
+        throw "setup.exe no se encontró tras la extracción."
+    }
+    return $setup
+}
+
+function Start-ODTInstall {
+    param(
+        [Parameter(Mandatory)] [string]$SetupExe,
+        [Parameter(Mandatory)] [string]$ConfigXml
+    )
+    Write-Log "Iniciando instalación: `"$SetupExe`" /configure `"$ConfigXml`""
+    $p = Start-Process -FilePath $SetupExe -ArgumentList "/configure `"$ConfigXml`"" -PassThru
+    $p.WaitForExit()
+    return $p.ExitCode
+}
+#endregion
+
+#region UI (WinForms)
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+$form         = New-Object Windows.Forms.Form
+$form.Text    = "Office LTSC Installer"
+$form.Size    = New-Object Drawing.Size(720, 640)
+$form.StartPosition = 'CenterScreen'
+$form.TopMost = $false
+
+$font = New-Object Drawing.Font("Segoe UI",10)
+
+# Controles
+$lblVersion = New-Object Windows.Forms.Label
+$lblVersion.Text = "Versión:"
+$lblVersion.Location = '20,20'
+$lblVersion.AutoSize = $true
+$lblVersion.Font = $font
+
+$cmbVersion = New-
