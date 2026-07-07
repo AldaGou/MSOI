@@ -131,6 +131,11 @@ function Show-PrepDialog {
 
 # ---- MAIN FORM ----
 function Show-MainForm {
+    $M = 16
+    $FW = 680
+    $GW = $FW - $M * 2
+    $y = 0
+
     $f = New-Object System.Windows.Forms.Form
     $f.AutoScaleMode = "Dpi"
     $f.Text = "MSOI - Microsoft Office Installer"
@@ -140,10 +145,6 @@ function Show-MainForm {
     $f.MaximizeBox = $false
     $f.BackColor = "White"
     try { $f.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon([System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName) } catch {}
-
-    $M = $script:M
-    $GW = $script:GW
-    $y = 0
 
     # ===== TITLE =====
     $y += 15
