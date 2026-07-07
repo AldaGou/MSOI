@@ -6,7 +6,7 @@
     Supports multiple editions, architectures, languages and app selection.
 .NOTES
     Requirements: Administrator, PowerShell 5.0+, .NET Framework 4.5+
-    Usage: irm https://aldagou.github.io/MSOI/MSOIV2.ps1 | iex
+    Usage: irm https://aldagou.github.io/MSOI/MSOIGUI.ps1 | iex
 #>
 
 #Requires -RunAsAdministrator
