@@ -5,15 +5,10 @@ Herramienta para descargar e instalar Microsoft Office LTSC/2019/2016/2013 desde
 ## Versiones disponibles
 
 - Office LTSC Professional Plus 2024
-- Office LTSC Standard 2024
 - Office LTSC Professional Plus 2021
-- Office LTSC Standard 2021
 - Office Professional Plus 2019
-- Office Standard 2019
 - Office Professional Plus 2016
-- Office Standard 2016
 - Office Professional Plus 2013
-- Office Standard 2013
 
 ## Uso
 
