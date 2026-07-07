@@ -2,21 +2,21 @@
 .SYNOPSIS
     MSOI - Microsoft Office Installation Tool (GUI)
 .DESCRIPTION
-    Interfaz gráfica para descargar e instalar Microsoft Office LTSC.
-    Soporta múltiples ediciones, arquitecturas, idiomas y personalización.
+    Graphical tool to download and install Microsoft Office LTSC.
+    Supports multiple editions, architectures, languages and app selection.
 .NOTES
-    Requiere: Administrador, PowerShell 5.0+, .NET Framework 4.5+
-    Uso: irm https://aldagou.github.io/MSOI/MSOI.ps1 | iex
+    Requirements: Administrator, PowerShell 5.0+, .NET Framework 4.5+
+    Usage: irm https://aldagou.github.io/MSOI/MSOI.ps1 | iex
 #>
 
 #Requires -RunAsAdministrator
 
-# ---- CARGAR ENSAMBLADOS ----
+# ---- LOAD ASSEMBLIES ----
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
-# ---- DPI AWARENESS (resolve rendering en alta resolución) ----
+# ---- DPI AWARENESS (fix blurry text on high-DPI displays) ----
 Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
@@ -29,17 +29,17 @@ public class MSOI_DpiHelper {
 "@
 try { [MSOI_DpiHelper]::SetProcessDpiAwareness(1) } catch { try { [MSOI_DpiHelper]::SetProcessDPIAware() } catch {} }
 
-# ---- VARIABLES GLOBALES ----
-$script:logFile  = Join-Path $env:Temp "MSOI_Install.log"
-$script:odtTemp  = Join-Path $env:Temp "ODT"
-$script:odtExe   = Join-Path $env:Temp "OfficeDeploymentTool.exe"
-$script:odtReady = $false
-
-$script:odtUrls  = @(
+# ---- OS DETECTION ----
+$script:is64BitOS = [Environment]::Is64BitOperatingSystem
+$script:logFile   = Join-Path $env:Temp "MSOI_Install.log"
+$script:odtTemp   = Join-Path $env:Temp "ODT"
+$script:odtExe    = Join-Path $env:Temp "OfficeDeploymentTool.exe"
+$script:odtReady  = $false
+$script:odtUrls   = @(
     "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_18227-20162.exe"
 )
 
-# ---- FUNCIONES AUXILIARES ----
+# ---- HELPER FUNCTIONS ----
 function Write-Log {
     param([string]$Message, [string]$Color = "Gray")
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -50,15 +50,15 @@ function Write-Log {
 function Get-LanguageCode {
     param([string]$DisplayText)
     if ($DisplayText -match '\(([^)]+)\)') { return $matches[1] }
-    return "es-ES"
+    return "en-US"
 }
 
-# ---- FORMULARIO DE PREPARACIÓN (ODT) ----
+# ---- PREPARATION DIALOG (ODT download & extract) ----
 function Show-PreparationDialog {
     $form = New-Object System.Windows.Forms.Form
-    $form.Text              = "MSOI - Preparación"
-    $form.Size              = New-Object System.Drawing.Size(460, 190)
     $form.AutoScaleMode     = "Dpi"
+    $form.Text              = "MSOI - Preparation"
+    $form.Size              = New-Object System.Drawing.Size(460, 190)
     $form.FormBorderStyle   = "FixedDialog"
     $form.ControlBox        = $false
     $form.StartPosition     = "CenterScreen"
@@ -66,7 +66,7 @@ function Show-PreparationDialog {
     $form.TopMost           = $true
 
     $lblTitle = New-Object System.Windows.Forms.Label
-    $lblTitle.Text          = "Preparando Office Deployment Tool..."
+    $lblTitle.Text          = "Preparing Office Deployment Tool..."
     $lblTitle.Location      = New-Object System.Drawing.Point(25, 30)
     $lblTitle.Size          = New-Object System.Drawing.Size(410, 25)
     $lblTitle.Font          = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
@@ -74,7 +74,7 @@ function Show-PreparationDialog {
 
     $lblStatus = New-Object System.Windows.Forms.Label
     $lblStatus.Name         = "lblStatus"
-    $lblStatus.Text         = "Iniciando..."
+    $lblStatus.Text         = "Starting..."
     $lblStatus.Location     = New-Object System.Drawing.Point(25, 60)
     $lblStatus.Size         = New-Object System.Drawing.Size(410, 20)
     $lblStatus.Font         = New-Object System.Drawing.Font("Segoe UI", 9)
@@ -98,7 +98,7 @@ function Show-PreparationDialog {
     }
 
     try {
-        Update-Status "Limpiando archivos temporales anteriores..."
+        Update-Status "Cleaning up previous temporary files..."
         if (Test-Path $script:odtTemp) {
             Remove-Item -Path $script:odtTemp -Recurse -Force -ErrorAction SilentlyContinue
         }
@@ -109,43 +109,43 @@ function Show-PreparationDialog {
 
         $downloaded = $false
         foreach ($url in $script:odtUrls) {
-            Update-Status "Descargando Office Deployment Tool..."
+            Update-Status "Downloading Office Deployment Tool..."
             try {
                 $wc = New-Object System.Net.WebClient
                 $wc.DownloadFile($url, $script:odtExe)
                 $downloaded = $true
                 break
             } catch {
-                Update-Status "Error, intentando con servidor alternativo..."
+                Update-Status "Failed, trying alternative source..."
                 Start-Sleep -Milliseconds 500
             }
         }
 
         if (-not $downloaded) {
-            throw "No se pudo descargar el ODT desde ninguna fuente."
+            throw "Could not download the Office Deployment Tool from any source."
         }
 
-        Update-Status "Extrayendo Office Deployment Tool..."
+        Update-Status "Extracting Office Deployment Tool..."
         Start-Sleep -Milliseconds 300
         $proc = Start-Process -FilePath $script:odtExe -ArgumentList "/quiet /extract:`"$($script:odtTemp)`"" -Wait -PassThru
         if ($proc.ExitCode -ne 0) {
-            throw "Extracción falló (ExitCode: $($proc.ExitCode))."
+            throw "Extraction failed (ExitCode: $($proc.ExitCode))."
         }
 
         $setupExe = Join-Path $script:odtTemp "setup.exe"
         if (-not (Test-Path $setupExe)) {
-            throw "No se encontró setup.exe después de extraer."
+            throw "setup.exe not found after extraction."
         }
 
         $script:odtReady = $true
-        Update-Status "Listo."
+        Update-Status "Done."
         Start-Sleep -Milliseconds 400
     } catch {
         Update-Status "ERROR: $_"
-        Write-Log "Error en preparación: $_" "Red"
+        Write-Log "Preparation error: $_" "Red"
         Start-Sleep -Milliseconds 800
         [System.Windows.Forms.MessageBox]::Show(
-            "Error al preparar el Office Deployment Tool.`n`n$_`n`nDescárgalo manualmente desde:`nhttps://www.microsoft.com/en-us/download/details.aspx?id=49117",
+            "Failed to prepare the Office Deployment Tool.`n`n$_`n`nYou can download it manually from:`nhttps://www.microsoft.com/en-us/download/details.aspx?id=49117",
             "MSOI - Error",
             "OK",
             "Error"
@@ -155,22 +155,22 @@ function Show-PreparationDialog {
     $form.Close()
 }
 
-# ---- FORMULARIO PRINCIPAL ----
+# ---- MAIN FORM ----
 function Show-MainForm {
     $form = New-Object System.Windows.Forms.Form
-    $form.Text              = "MSOI - Instalación de Microsoft Office"
+    $form.AutoScaleMode     = "Dpi"
+    $form.Text              = "MSOI - Microsoft Office Installer"
     $form.Size              = New-Object System.Drawing.Size(720, 670)
     $form.MinimumSize       = New-Object System.Drawing.Size(720, 670)
-    $form.AutoScaleMode     = "Dpi"
     $form.StartPosition     = "CenterScreen"
     $form.BackColor         = "White"
     $form.Font              = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Regular, [System.Drawing.GraphicsUnit]::Point)
     $form.FormBorderStyle   = "FixedSingle"
     $form.MaximizeBox       = $false
 
-    # =============== TÍTULO ===============
+    # =============== TITLE ===============
     $lblTitle = New-Object System.Windows.Forms.Label
-    $lblTitle.Text          = "MSOI - Instalación de Microsoft Office"
+    $lblTitle.Text          = "MSOI - Microsoft Office Installer"
     $lblTitle.Location      = New-Object System.Drawing.Point(20, 15)
     $lblTitle.Size          = New-Object System.Drawing.Size(680, 30)
     $lblTitle.Font          = New-Object System.Drawing.Font("Segoe UI", 14, [System.Drawing.FontStyle]::Bold)
@@ -178,15 +178,15 @@ function Show-MainForm {
     $form.Controls.Add($lblTitle)
 
     $lblSub = New-Object System.Windows.Forms.Label
-    $lblSub.Text            = "Selecciona las opciones de instalación"
+    $lblSub.Text            = "Configure your Office installation options below"
     $lblSub.Location        = New-Object System.Drawing.Point(20, 48)
     $lblSub.Size            = New-Object System.Drawing.Size(680, 20)
     $lblSub.ForeColor       = "#666666"
     $form.Controls.Add($lblSub)
 
-    # =============== VERSIÓN ===============
+    # =============== OFFICE VERSION ===============
     $grpVersion = New-Object System.Windows.Forms.GroupBox
-    $grpVersion.Text        = "Versión de Office"
+    $grpVersion.Text        = "Office Version"
     $grpVersion.Location    = New-Object System.Drawing.Point(15, 75)
     $grpVersion.Size        = New-Object System.Drawing.Size(685, 55)
     $grpVersion.Font        = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
@@ -209,62 +209,93 @@ function Show-MainForm {
     $cmbVersion.SelectedIndex = 0
     $grpVersion.Controls.Add($cmbVersion)
 
-    # =============== ARQUITECTURA + IDIOMA ===============
+    # =============== ARCHITECTURE + LANGUAGE ===============
     $grpArchLang = New-Object System.Windows.Forms.GroupBox
-    $grpArchLang.Text       = "Arquitectura e Idioma"
+    $grpArchLang.Text       = "Architecture & Language"
     $grpArchLang.Location   = New-Object System.Drawing.Point(15, 140)
     $grpArchLang.Size       = New-Object System.Drawing.Size(685, 75)
     $grpArchLang.Font       = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
     $form.Controls.Add($grpArchLang)
 
-    $rbArch64 = New-Object System.Windows.Forms.RadioButton
-    $rbArch64.Name          = "rbArch64"
-    $rbArch64.Text          = "64 bits (recomendado)"
-    $rbArch64.Location      = New-Object System.Drawing.Point(15, 22)
-    $rbArch64.Size          = New-Object System.Drawing.Size(160, 22)
-    $rbArch64.Font          = New-Object System.Drawing.Font("Segoe UI", 9)
-    $rbArch64.Checked       = $true
-    $grpArchLang.Controls.Add($rbArch64)
+    if ($script:is64BitOS) {
+        $rbArch64 = New-Object System.Windows.Forms.RadioButton
+        $rbArch64.Name          = "rbArch64"
+        $rbArch64.Text          = "64-bit (auto-detected, recommended)"
+        $rbArch64.Location      = New-Object System.Drawing.Point(15, 22)
+        $rbArch64.Size          = New-Object System.Drawing.Size(250, 22)
+        $rbArch64.Font          = New-Object System.Drawing.Font("Segoe UI", 9)
+        $rbArch64.Checked       = $true
+        $grpArchLang.Controls.Add($rbArch64)
 
-    $rbArch32 = New-Object System.Windows.Forms.RadioButton
-    $rbArch32.Name          = "rbArch32"
-    $rbArch32.Text          = "32 bits"
-    $rbArch32.Location      = New-Object System.Drawing.Point(15, 45)
-    $rbArch32.Size          = New-Object System.Drawing.Size(160, 22)
-    $rbArch32.Font          = New-Object System.Drawing.Font("Segoe UI", 9)
-    $grpArchLang.Controls.Add($rbArch32)
+        $rbArch32 = New-Object System.Windows.Forms.RadioButton
+        $rbArch32.Name          = "rbArch32"
+        $rbArch32.Text          = "32-bit"
+        $rbArch32.Location      = New-Object System.Drawing.Point(15, 46)
+        $rbArch32.Size          = New-Object System.Drawing.Size(250, 22)
+        $rbArch32.Font          = New-Object System.Drawing.Font("Segoe UI", 9)
+        $grpArchLang.Controls.Add($rbArch32)
+    } else {
+        $rbArch64 = New-Object System.Windows.Forms.RadioButton
+        $rbArch64.Name          = "rbArch64"
+        $rbArch64.Text          = "64-bit (not available on this system)"
+        $rbArch64.Location      = New-Object System.Drawing.Point(15, 22)
+        $rbArch64.Size          = New-Object System.Drawing.Size(250, 22)
+        $rbArch64.Font          = New-Object System.Drawing.Font("Segoe UI", 9)
+        $rbArch64.Checked       = $false
+        $rbArch64.Enabled       = $false
+        $grpArchLang.Controls.Add($rbArch64)
+
+        $rbArch32 = New-Object System.Windows.Forms.RadioButton
+        $rbArch32.Name          = "rbArch32"
+        $rbArch32.Text          = "32-bit (auto-detected, recommended)"
+        $rbArch32.Location      = New-Object System.Drawing.Point(15, 46)
+        $rbArch32.Size          = New-Object System.Drawing.Size(250, 22)
+        $rbArch32.Font          = New-Object System.Drawing.Font("Segoe UI", 9)
+        $rbArch32.Checked       = $true
+        $grpArchLang.Controls.Add($rbArch32)
+    }
+
+    # Architecture info label
+    $archInfo = New-Object System.Windows.Forms.Label
+    $archInfo.Text           = "OS: $(if ($script:is64BitOS) { '64-bit' } else { '32-bit' })"
+    $archInfo.Location       = New-Object System.Drawing.Point(15, 52)
+    $archInfo.Size           = New-Object System.Drawing.Size(200, 15)
+    $archInfo.Font           = New-Object System.Drawing.Font("Segoe UI", 7)
+    $archInfo.ForeColor      = "#999999"
+    $grpArchLang.Controls.Add($archInfo)
+    if ($script:is64BitOS) { $archInfo.Location = New-Object System.Drawing.Point(15, 28) }
 
     $lblLang = New-Object System.Windows.Forms.Label
-    $lblLang.Text           = "Idioma:"
-    $lblLang.Location       = New-Object System.Drawing.Point(240, 24)
-    $lblLang.Size           = New-Object System.Drawing.Size(60, 20)
+    $lblLang.Text           = "Language:"
+    $lblLang.Location       = New-Object System.Drawing.Point(280, 24)
+    $lblLang.Size           = New-Object System.Drawing.Size(70, 20)
     $lblLang.Font           = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Regular)
     $grpArchLang.Controls.Add($lblLang)
 
     $cmbLang = New-Object System.Windows.Forms.ComboBox
     $cmbLang.Name           = "cmbLang"
-    $cmbLang.Location       = New-Object System.Drawing.Point(300, 22)
-    $cmbLang.Size           = New-Object System.Drawing.Size(365, 25)
+    $cmbLang.Location       = New-Object System.Drawing.Point(350, 22)
+    $cmbLang.Size           = New-Object System.Drawing.Size(315, 25)
     $cmbLang.DropDownStyle  = "DropDownList"
     $cmbLang.Font           = New-Object System.Drawing.Font("Segoe UI", 9)
     $cmbLang.Items.AddRange(@(
-        "Español (es-ES)",
         "English (en-US)",
-        "Français (fr-FR)",
-        "Deutsch (de-DE)",
-        "Português (pt-BR)",
-        "Italiano (it-IT)",
-        "Nederlands (nl-NL)",
-        "Polski (pl-PL)",
-        "Русский (ru-RU)",
-        "日本語 (ja-JP)"
+        "Spanish (es-ES)",
+        "French (fr-FR)",
+        "German (de-DE)",
+        "Brazilian Portuguese (pt-BR)",
+        "Italian (it-IT)",
+        "Dutch (nl-NL)",
+        "Polish (pl-PL)",
+        "Russian (ru-RU)",
+        "Japanese (ja-JP)"
     ))
     $cmbLang.SelectedIndex = 0
     $grpArchLang.Controls.Add($cmbLang)
 
-    # =============== PRODUCTOS ADICIONALES ===============
+    # =============== ADDITIONAL PRODUCTS ===============
     $grpExtra = New-Object System.Windows.Forms.GroupBox
-    $grpExtra.Text          = "Productos adicionales"
+    $grpExtra.Text          = "Additional Products"
     $grpExtra.Location      = New-Object System.Drawing.Point(15, 225)
     $grpExtra.Size          = New-Object System.Drawing.Size(685, 70)
     $grpExtra.Font          = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
@@ -272,7 +303,7 @@ function Show-MainForm {
 
     $chkProject = New-Object System.Windows.Forms.CheckBox
     $chkProject.Name        = "chkProject"
-    $chkProject.Text        = "Incluir Project"
+    $chkProject.Text        = "Include Project"
     $chkProject.Location    = New-Object System.Drawing.Point(15, 22)
     $chkProject.Size        = New-Object System.Drawing.Size(130, 22)
     $chkProject.Font        = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Regular)
@@ -295,7 +326,7 @@ function Show-MainForm {
 
     $chkVisio = New-Object System.Windows.Forms.CheckBox
     $chkVisio.Name          = "chkVisio"
-    $chkVisio.Text          = "Incluir Visio"
+    $chkVisio.Text          = "Include Visio"
     $chkVisio.Location      = New-Object System.Drawing.Point(15, 44)
     $chkVisio.Size          = New-Object System.Drawing.Size(130, 22)
     $chkVisio.Font          = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Regular)
@@ -316,9 +347,9 @@ function Show-MainForm {
         $cmbVisioEd.Enabled = $chkVisio.Checked
     })
 
-    # =============== APLICACIONES ===============
+    # =============== APPLICATIONS ===============
     $grpApps = New-Object System.Windows.Forms.GroupBox
-    $grpApps.Text           = "Aplicaciones a instalar"
+    $grpApps.Text           = "Applications to Install"
     $grpApps.Location       = New-Object System.Drawing.Point(15, 305)
     $grpApps.Size           = New-Object System.Drawing.Size(685, 115)
     $grpApps.Font           = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
@@ -326,7 +357,7 @@ function Show-MainForm {
 
     $chkSelectAll = New-Object System.Windows.Forms.CheckBox
     $chkSelectAll.Name      = "chkSelectAll"
-    $chkSelectAll.Text      = "Seleccionar todas"
+    $chkSelectAll.Text      = "Select All"
     $chkSelectAll.Location  = New-Object System.Drawing.Point(15, 22)
     $chkSelectAll.Size      = New-Object System.Drawing.Size(140, 22)
     $chkSelectAll.Checked   = $true
@@ -371,9 +402,9 @@ function Show-MainForm {
         }
     })
 
-    # =============== MODO DE INSTALACIÓN ===============
+    # =============== INSTALLATION MODE ===============
     $grpMode = New-Object System.Windows.Forms.GroupBox
-    $grpMode.Text           = "Modo de instalación"
+    $grpMode.Text           = "Installation Mode"
     $grpMode.Location       = New-Object System.Drawing.Point(15, 430)
     $grpMode.Size           = New-Object System.Drawing.Size(685, 75)
     $grpMode.Font           = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
@@ -381,33 +412,33 @@ function Show-MainForm {
 
     $rbMode1 = New-Object System.Windows.Forms.RadioButton
     $rbMode1.Name           = "rbMode1"
-    $rbMode1.Text           = "Descargar e instalar (recomendado)"
+    $rbMode1.Text           = "Download and Install (recommended)"
     $rbMode1.Location       = New-Object System.Drawing.Point(15, 22)
-    $rbMode1.Size           = New-Object System.Drawing.Size(300, 22)
+    $rbMode1.Size           = New-Object System.Drawing.Size(310, 22)
     $rbMode1.Checked        = $true
     $rbMode1.Font           = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Regular)
     $grpMode.Controls.Add($rbMode1)
 
     $rbMode2 = New-Object System.Windows.Forms.RadioButton
     $rbMode2.Name           = "rbMode2"
-    $rbMode2.Text           = "Solo descargar (sin instalar)"
+    $rbMode2.Text           = "Download Only (without installing)"
     $rbMode2.Location       = New-Object System.Drawing.Point(15, 46)
-    $rbMode2.Size           = New-Object System.Drawing.Size(300, 22)
+    $rbMode2.Size           = New-Object System.Drawing.Size(310, 22)
     $rbMode2.Font           = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Regular)
     $grpMode.Controls.Add($rbMode2)
 
     $rbMode3 = New-Object System.Windows.Forms.RadioButton
     $rbMode3.Name           = "rbMode3"
-    $rbMode3.Text           = "Instalar desde descarga previa"
+    $rbMode3.Text           = "Install from Previously Downloaded Files"
     $rbMode3.Location       = New-Object System.Drawing.Point(350, 22)
-    $rbMode3.Size           = New-Object System.Drawing.Size(300, 22)
+    $rbMode3.Size           = New-Object System.Drawing.Size(310, 22)
     $rbMode3.Font           = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Regular)
     $grpMode.Controls.Add($rbMode3)
 
-    # =============== BARRA DE ESTADO ===============
+    # =============== STATUS BAR ===============
     $statusBar = New-Object System.Windows.Forms.Label
     $statusBar.Name         = "statusBar"
-    $statusBar.Text         = "Estado: Listo para instalar"
+    $statusBar.Text         = "Status: Ready to install"
     $statusBar.Location     = New-Object System.Drawing.Point(15, 520)
     $statusBar.Size         = New-Object System.Drawing.Size(685, 28)
     $statusBar.Font         = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Regular)
@@ -416,10 +447,10 @@ function Show-MainForm {
     $statusBar.TextAlign    = "MiddleLeft"
     $form.Controls.Add($statusBar)
 
-    # =============== BOTONES ===============
+    # =============== BUTTONS ===============
     $btnInstall = New-Object System.Windows.Forms.Button
     $btnInstall.Name        = "btnInstall"
-    $btnInstall.Text        = "Instalar Office"
+    $btnInstall.Text        = "Install Office"
     $btnInstall.Location    = New-Object System.Drawing.Point(15, 565)
     $btnInstall.Size        = New-Object System.Drawing.Size(170, 40)
     $btnInstall.Font        = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
@@ -432,14 +463,14 @@ function Show-MainForm {
 
     $btnCancel = New-Object System.Windows.Forms.Button
     $btnCancel.Name         = "btnCancel"
-    $btnCancel.Text         = "Cancelar"
+    $btnCancel.Text         = "Cancel"
     $btnCancel.Location     = New-Object System.Drawing.Point(195, 565)
     $btnCancel.Size         = New-Object System.Drawing.Size(100, 40)
     $btnCancel.Font         = New-Object System.Drawing.Font("Segoe UI", 9)
     $btnCancel.Cursor       = "Hand"
     $form.Controls.Add($btnCancel)
 
-    # =============== MAPA DE VERSIONES ===============
+    # =============== VERSION LOOKUP TABLE ===============
     $versionMap = @(
         @{Channel="PerpetualVL2024"; ProductID="ProPlus2024Volume"; VisioPro="VisioPro2024Volume"; VisioStd="VisioStd2024Volume"; ProjectPro="ProjectPro2024Volume"; ProjectStd="ProjectStd2024Volume"}
         @{Channel="PerpetualVL2024"; ProductID="Standard2024Volume"; VisioPro="VisioPro2024Volume"; VisioStd="VisioStd2024Volume"; ProjectPro="ProjectPro2024Volume"; ProjectStd="ProjectStd2024Volume"}
@@ -449,14 +480,14 @@ function Show-MainForm {
         @{Channel="PerpetualVL2019"; ProductID="Standard2019Volume"; VisioPro="VisioPro2019Volume"; VisioStd="VisioStd2019Volume"; ProjectPro="ProjectPro2019Volume"; ProjectStd="ProjectStd2019Volume"}
     )
 
-    # =============== EVENTOS ===============
+    # =============== EVENT HANDLERS ===============
     $btnCancel.Add_Click({ $form.Close() })
 
     $btnInstall.Add_Click({
         $btnInstall.Enabled = $false
         $btnCancel.Enabled  = $false
         $form.Cursor        = "WaitCursor"
-        $statusBar.Text     = "Estado: Preparando configuración..."
+        $statusBar.Text     = "Status: Preparing configuration..."
         $form.Refresh()
 
         try {
@@ -477,7 +508,7 @@ function Show-MainForm {
                 if ($cb.Checked) { $selectedApps += $cb.Text }
             }
 
-            $statusBar.Text = "Estado: Generando configuración XML..."
+            $statusBar.Text = "Status: Generating XML configuration..."
             $form.Refresh()
 
             $sb = New-Object System.Text.StringBuilder
@@ -522,7 +553,7 @@ function Show-MainForm {
                 if ($downloadMode -eq "3") {
                     $srcPath = Join-Path $script:odtTemp "Office"
                     if (-not (Test-Path $srcPath)) {
-                        throw "No se encontró la carpeta 'Office' en $script:odtTemp. Usa 'Solo descargar' primero."
+                        throw "The 'Office' folder was not found in $script:odtTemp. Use 'Download Only' first."
                     }
                 }
                 [void]$sb.AppendLine('    <Display Level="Full" AcceptEULA="TRUE" />')
@@ -533,42 +564,44 @@ function Show-MainForm {
             $configXml  = $sb.ToString()
             $configPath = Join-Path $script:odtTemp "configuration.xml"
             Set-Content -Path $configPath -Value $configXml -Encoding UTF8
-            Write-Log "Configuración generada: $configPath" "Green"
-
-            if ($downloadMode -eq "2") {
-                $statusBar.Text = "Estado: Descargando Office (sin instalar)..."
-            } else {
-                $statusBar.Text = "Estado: Instalando Office..."
-            }
-            $form.Refresh()
+            Write-Log "Configuration generated: $configPath" "Green"
 
             $setupExe = Join-Path $script:odtTemp "setup.exe"
-            $arg = if ($downloadMode -eq "2") { "/download" } else { "/configure" }
+            if ($downloadMode -eq "2") {
+                $statusBar.Text = "Status: Downloading Office (without installing)..."
+                $form.Refresh()
+                $arg = "/download"
+            } else {
+                $statusBar.Text = "Status: Installing Office..."
+                $form.Refresh()
+                $arg = "/configure"
+            }
+
             $proc = Start-Process -FilePath $setupExe -ArgumentList "$arg `"$configPath`"" -Wait -PassThru
 
             if ($proc.ExitCode -eq 0) {
-                $statusBar.Text   = "Estado: Operación completada exitosamente."
+                $statusBar.Text   = "Status: Operation completed successfully."
                 $statusBar.ForeColor = "Green"
-                Write-Log "Operación completada exitosamente." "Green"
+                Write-Log "Operation completed successfully." "Green"
                 [System.Windows.Forms.MessageBox]::Show(
-                    "La operación se completó exitosamente.",
-                    "MSOI - Éxito",
+                    "The operation completed successfully.",
+                    "MSOI - Success",
                     "OK",
                     "Information"
                 )
             } else {
-                $statusBar.Text   = "Estado: Error (código: $($proc.ExitCode)). Revisa los logs."
+                $statusBar.Text   = "Status: Error (code: $($proc.ExitCode)). Check logs for details."
                 $statusBar.ForeColor = "Red"
-                Write-Log "Operación falló con código: $($proc.ExitCode)." "Red"
+                Write-Log "Operation failed with code: $($proc.ExitCode)." "Red"
                 [System.Windows.Forms.MessageBox]::Show(
-                    "La operación falló (código: $($proc.ExitCode)).`n`nLogs: $script:odtTemp",
+                    "The operation failed (code: $($proc.ExitCode)).`n`nLogs: $script:odtTemp",
                     "MSOI - Error",
                     "OK",
                     "Error"
                 )
             }
         } catch {
-            $statusBar.Text   = "Estado: Error - $_"
+            $statusBar.Text   = "Status: Error - $_"
             $statusBar.ForeColor = "Red"
             Write-Log "Error: $_" "Red"
             [System.Windows.Forms.MessageBox]::Show(
@@ -585,23 +618,24 @@ function Show-MainForm {
         }
     })
 
-    # =============== MOSTRAR ===============
+    # =============== SHOW FORM ===============
     [void]$form.ShowDialog()
 }
 
 # ====================================================
 # MAIN
 # ====================================================
-Write-Log "=== MSOI GUI v2.0 iniciado ===" "Cyan"
-Write-Log "Sistema: $((Get-CimInstance Win32_OperatingSystem).Caption)" "Gray"
+Write-Log "=== MSOI GUI v2.0 started ===" "Cyan"
+Write-Log "System: $((Get-CimInstance Win32_OperatingSystem).Caption)" "Gray"
+Write-Log "Architecture: $(if ($script:is64BitOS) { '64-bit' } else { '32-bit' }) OS" "Gray"
 
 Show-PreparationDialog
 
 if (-not $script:odtReady) {
-    Write-Log "ODT no disponible. Abortando." "Red"
+    Write-Log "ODT not available. Aborting." "Red"
     [System.Windows.Forms.MessageBox]::Show(
-        "No se pudo preparar el Office Deployment Tool. El script no puede continuar.",
-        "MSOI - Error crítico",
+        "The Office Deployment Tool could not be prepared. The script cannot continue.",
+        "MSOI - Critical Error",
         "OK",
         "Error"
     )
@@ -610,4 +644,4 @@ if (-not $script:odtReady) {
 
 $null = Show-MainForm
 
-Write-Log "=== MSOI GUI finalizado ===" "Cyan"
+Write-Log "=== MSOI GUI finished ===" "Cyan"
