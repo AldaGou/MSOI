@@ -16,6 +16,19 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
+# ---- DPI AWARENESS (resolve rendering en alta resolución) ----
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class MSOI_DpiHelper {
+    [DllImport("user32.dll")]
+    public static extern bool SetProcessDPIAware();
+    [DllImport("shcore.dll")]
+    public static extern int SetProcessDpiAwareness(int awareness);
+}
+"@
+try { [MSOI_DpiHelper]::SetProcessDpiAwareness(1) } catch { try { [MSOI_DpiHelper]::SetProcessDPIAware() } catch {} }
+
 # ---- VARIABLES GLOBALES ----
 $script:logFile  = Join-Path $env:Temp "MSOI_Install.log"
 $script:odtTemp  = Join-Path $env:Temp "ODT"
@@ -45,6 +58,7 @@ function Show-PreparationDialog {
     $form = New-Object System.Windows.Forms.Form
     $form.Text              = "MSOI - Preparación"
     $form.Size              = New-Object System.Drawing.Size(460, 190)
+    $form.AutoScaleMode     = "Dpi"
     $form.FormBorderStyle   = "FixedDialog"
     $form.ControlBox        = $false
     $form.StartPosition     = "CenterScreen"
@@ -147,9 +161,10 @@ function Show-MainForm {
     $form.Text              = "MSOI - Instalación de Microsoft Office"
     $form.Size              = New-Object System.Drawing.Size(720, 670)
     $form.MinimumSize       = New-Object System.Drawing.Size(720, 670)
+    $form.AutoScaleMode     = "Dpi"
     $form.StartPosition     = "CenterScreen"
     $form.BackColor         = "White"
-    $form.Font              = New-Object System.Drawing.Font("Segoe UI", 9)
+    $form.Font              = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Regular, [System.Drawing.GraphicsUnit]::Point)
     $form.FormBorderStyle   = "FixedSingle"
     $form.MaximizeBox       = $false
 
