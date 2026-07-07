@@ -104,19 +104,17 @@ function Step-PrepareODT {
 function Step-Version {
     $versions = @(
         "Office LTSC Professional Plus 2024",
-        "Office LTSC Standard 2024",
         "Office LTSC Professional Plus 2021",
-        "Office LTSC Standard 2021",
         "Office Professional Plus 2019",
-        "Office Standard 2019"
+        "Office Professional Plus 2016",
+        "Office Professional Plus 2013"
     )
     $vm = @(
         @{C="PerpetualVL2024";P="ProPlus2024Volume";VP="VisioPro2024Volume";VS="VisioStd2024Volume";PP="ProjectPro2024Volume";PS="ProjectStd2024Volume"}
-        @{C="PerpetualVL2024";P="Standard2024Volume";VP="VisioPro2024Volume";VS="VisioStd2024Volume";PP="ProjectPro2024Volume";PS="ProjectStd2024Volume"}
         @{C="PerpetualVL2021";P="ProPlus2021Volume";VP="VisioPro2021Volume";VS="VisioStd2021Volume";PP="ProjectPro2021Volume";PS="ProjectStd2021Volume"}
-        @{C="PerpetualVL2021";P="Standard2021Volume";VP="VisioPro2021Volume";VS="VisioStd2021Volume";PP="ProjectPro2021Volume";PS="ProjectStd2021Volume"}
         @{C="PerpetualVL2019";P="ProPlus2019Volume";VP="VisioPro2019Volume";VS="VisioStd2019Volume";PP="ProjectPro2019Volume";PS="ProjectStd2019Volume"}
-        @{C="PerpetualVL2019";P="Standard2019Volume";VP="VisioPro2019Volume";VS="VisioStd2019Volume";PP="ProjectPro2019Volume";PS="ProjectStd2019Volume"}
+        @{C="PerpetualVL2016";P="ProPlus2016Volume";VP="VisioPro2016Volume";VS="VisioStd2016Volume";PP="ProjectPro2016Volume";PS="ProjectStd2016Volume"}
+        @{C="PerpetualVL2013";P="ProPlus2013Volume";VP="VisioPro2013Volume";VS="VisioStd2013Volume";PP="ProjectPro2013Volume";PS="ProjectStd2013Volume"}
     )
 
     Color "  >> " "Yellow"; Color "Select Office Version" "White"; Write-Host ""
@@ -127,7 +125,7 @@ function Step-Version {
     Hr
     $choice = Read-Host "  Enter choice (1-$($versions.Count)) [1]"
     if ([string]::IsNullOrWhiteSpace($choice)) { $choice = "1" }
-    if ($choice -notmatch '^[1-6]$') { Color "    Invalid, using default (1)" "Red"; $choice = "1"; Write-Host "" }
+    if ($choice -notmatch '^[1-5]$') { Color "    Invalid, using default (1)" "Red"; $choice = "1"; Write-Host "" }
     $idx = [int]$choice - 1
     Write-Host ""
 
