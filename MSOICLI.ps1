@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     MSOICLI - Microsoft Office Installer (Command Line)
 .DESCRIPTION
@@ -9,7 +9,20 @@
     Usage: irm https://aldagou.github.io/MSOI/MSOICLI.ps1 | iex
 #>
 
-#Requires -RunAsAdministrator
+# ---- AUTO-LAUNCH IN NEW WINDOW ----
+if (-not $env:MSOI_NEW_WIN) {
+    $env:MSOI_NEW_WIN = "1"
+    $url = "https://aldagou.github.io/MSOI/MSOICLI.ps1"
+    $ps = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { "pwsh.exe" } else { "powershell.exe" }
+    Start-Process $ps -ArgumentList "-NoExit -Command `"irm $url | iex`"" -WindowStyle Normal
+    Write-Host "Opening installer in a new window..." -ForegroundColor Green
+    Start-Sleep 2
+    exit
+}
+
+# ---- ADMIN CHECK ----
+$script:isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $script:isAdmin) { Write-Host "  [!] This script requires Administrator privileges." -ForegroundColor Red; Read-Host "Press Enter to exit"; exit 1 }
 
 # ---- CONSTANTS ----
 $script:logFile = Join-Path $env:Temp "MSOICLI_Install.log"
@@ -110,11 +123,11 @@ function Step-Version {
         "Office Professional Plus 2013"
     )
     $vm = @(
-        @{C="PerpetualVL2024";P="ProPlus2024Volume";VP="VisioPro2024Volume";VS="VisioStd2024Volume";PP="ProjectPro2024Volume";PS="ProjectStd2024Volume"}
-        @{C="PerpetualVL2021";P="ProPlus2021Volume";VP="VisioPro2021Volume";VS="VisioStd2021Volume";PP="ProjectPro2021Volume";PS="ProjectStd2021Volume"}
-        @{C="PerpetualVL2019";P="ProPlus2019Volume";VP="VisioPro2019Volume";VS="VisioStd2019Volume";PP="ProjectPro2019Volume";PS="ProjectStd2019Volume"}
-        @{C="PerpetualVL2016";P="ProPlus2016Volume";VP="VisioPro2016Volume";VS="VisioStd2016Volume";PP="ProjectPro2016Volume";PS="ProjectStd2016Volume"}
-        @{C="PerpetualVL2013";P="ProPlus2013Volume";VP="VisioPro2013Volume";VS="VisioStd2013Volume";PP="ProjectPro2013Volume";PS="ProjectStd2013Volume"}
+        @{C="PerpetualVL2024";P="ProPlus2024Volume";V="VisioPro2024Volume";J="ProjectPro2024Volume"}
+        @{C="PerpetualVL2021";P="ProPlus2021Volume";V="VisioPro2021Volume";J="ProjectPro2021Volume"}
+        @{C="PerpetualVL2019";P="ProPlus2019Volume";V="VisioPro2019Volume";J="ProjectPro2019Volume"}
+        @{C="PerpetualVL2016";P="ProPlus2016Volume";V="VisioPro2016Volume";J="ProjectPro2016Volume"}
+        @{C="PerpetualVL2013";P="ProPlus2013Volume";V="VisioPro2013Volume";J="ProjectPro2013Volume"}
     )
 
     Color "  >> " "Yellow"; Color "Select Office Version" "White"; Write-Host ""
@@ -134,34 +147,8 @@ function Step-Version {
         Index   = $idx
         Channel = $vm[$idx].C
         PID     = $vm[$idx].P
-        VisioP  = $vm[$idx].VP
-        VisioS  = $vm[$idx].VS
-        ProjP   = $vm[$idx].PP
-        ProjS   = $vm[$idx].PS
-    }
-}
-
-# ---- ARCHITECTURE ----
-function Step-Arch {
-    Color "  >> " "Yellow"; Color "Architecture" "White"; Write-Host ""
-    Hr
-    if ($script:is64Bit) {
-        Color "    System detected: " "DarkGray"; Color "64-bit" "Green"; Write-Host ""
-        Write-Host ""
-        Color "    1. " "DarkGray"; Color "64-bit (recommended)" "White"; Write-Host ""
-        Color "    2. " "DarkGray"; Color "32-bit" "White"; Write-Host ""
-        Hr
-        $c = Read-Host "  Enter choice (1-2) [1]"
-        if ([string]::IsNullOrWhiteSpace($c)) { $c = "1" }
-        if ($c -eq "2") { return "32" }
-        return "64"
-    } else {
-        Color "    System detected: " "DarkGray"; Color "32-bit" "Yellow"; Write-Host ""
-        Color "    64-bit is not available on this system." "DarkGray"; Write-Host ""
-        Write-Host ""
-        Color "    32-bit will be used." "Green"; Write-Host ""
-        Write-Host ""
-        return "32"
+        VisioID  = $vm[$idx].V
+        ProjID   = $vm[$idx].J
     }
 }
 
@@ -198,30 +185,14 @@ function Step-Products {
 
     $proj = Read-Host "  Include Microsoft Project? (Y/N) [N]"
     $projInclude = $proj -eq "Y" -or $proj -eq "y"
-    $projEd = "Pro"
-    if ($projInclude) {
-        Color "    1. " "DarkGray"; Color "Professional" "White"; Write-Host ""
-        Color "    2. " "DarkGray"; Color "Standard" "White"; Write-Host ""
-        $pe = Read-Host "    Edition (1-2) [1]"
-        if ($pe -eq "2") { $projEd = "Std" }
-    }
 
     $vis = Read-Host "  Include Microsoft Visio? (Y/N) [N]"
     $visInclude = $vis -eq "Y" -or $vis -eq "y"
-    $visEd = "Pro"
-    if ($visInclude) {
-        Color "    1. " "DarkGray"; Color "Professional" "White"; Write-Host ""
-        Color "    2. " "DarkGray"; Color "Standard" "White"; Write-Host ""
-        $ve = Read-Host "    Edition (1-2) [1]"
-        if ($ve -eq "2") { $visEd = "Std" }
-    }
 
     Write-Host ""
     return @{
         Project = $projInclude
-        ProjEd  = $projEd
         Visio   = $visInclude
-        VisioEd = $visEd
     }
 }
 
@@ -260,33 +231,11 @@ function Step-Apps {
     return $selected
 }
 
-# ---- INSTALLATION MODE ----
-function Step-Mode {
-    Color "  >> " "Yellow"; Color "Installation Mode" "White"; Write-Host ""
-    Hr
-    Color "    1. " "DarkGray"; Color "Download and Install (recommended)" "White"; Write-Host ""
-    Color "    2. " "DarkGray"; Color "Download Only (without installing)" "White"; Write-Host ""
-    Color "    3. " "DarkGray"; Color "Install from Previously Downloaded Files" "White"; Write-Host ""
-    Hr
-    $c = Read-Host "  Enter choice (1-3) [1]"
-    if ([string]::IsNullOrWhiteSpace($c)) { $c = "1" }
-    if ($c -notmatch '^[1-3]$') { $c = "1" }
-    Write-Host ""
-
-    switch ($c) {
-        "1" { return "install" }
-        "2" { return "download" }
-        "3" { return "cache" }
-    }
-}
-
 # ---- SUMMARY ----
 function Show-Summary {
     param(
-        $Version, $Arch, $Lang, $Products, $Apps, $Mode
+        $Version, $Arch, $Lang, $Products, $Apps
     )
-
-    $modeLabels = @{ "install" = "Download and Install"; "download" = "Download Only"; "cache" = "Install from Cache" }
 
     $appsStr = if ($Apps.Count -gt 5) {
         ($Apps[0..4] -join ', ') + ", +$($Apps.Count-5) more"
@@ -303,16 +252,15 @@ function Show-Summary {
     Color "  |$paddedTitle|" "Cyan"; Write-Host ""
     Color "  $hl" "Cyan"; Write-Host ""
 
-    $projStr = if ($Products.Project) { "Yes - $($Products.ProjEd)" } else { "No" }
-    $visStr  = if ($Products.Visio)   { "Yes - $($Products.VisioEd)" } else { "No" }
+    $projStr = if ($Products.Project) { "Yes" } else { "No" }
+    $visStr  = if ($Products.Visio)   { "Yes" } else { "No" }
     $rows = @(
         @("Office Version", $Version.Label),
         @("Architecture",   "$Arch-bit"),
         @("Language",       $Lang.Label),
         @("Project",        $projStr),
         @("Visio",          $visStr),
-        @("Applications",   $appsStr),
-        @("Mode",           $modeLabels[$Mode])
+        @("Applications",   $appsStr)
     )
 
     $labelW = 17
@@ -331,7 +279,7 @@ function Show-Summary {
 
 # ---- XML GENERATION ----
 function Build-Config {
-    param($Version, $Arch, $Lang, $Products, $Apps, $Mode)
+    param($Version, $Arch, $Lang, $Products, $Apps)
 
     $x = New-Object System.Text.StringBuilder
     [void]$x.AppendLine('<Configuration>')
@@ -345,57 +293,40 @@ function Build-Config {
     foreach ($ex in @("Bing","Groove","Lync","OneDrive","Teams")) { [void]$x.AppendLine("            <ExcludeApp ID=`"$ex`" />") }
     [void]$x.AppendLine("        </Product>")
 
-    if ($Products.Project) {
-        $pid = if ($Products.ProjEd -eq "Std") { $Version.ProjS } else { $Version.ProjP }
-        [void]$x.AppendLine("        <Product ID=`"$pid`"><Language ID=`"$($Lang.Code)`" /></Product>")
-    }
-    if ($Products.Visio) {
-        $vid = if ($Products.VisioEd -eq "Std") { $Version.VisioS } else { $Version.VisioP }
-        [void]$x.AppendLine("        <Product ID=`"$vid`"><Language ID=`"$($Lang.Code)`" /></Product>")
-    }
+    if ($Products.Project) { [void]$x.AppendLine("        <Product ID=`"$($Version.ProjID)`"><Language ID=`"$($Lang.Code)`" /></Product>") }
+    if ($Products.Visio)   { [void]$x.AppendLine("        <Product ID=`"$($Version.VisioID)`"><Language ID=`"$($Lang.Code)`" /></Product>") }
 
     [void]$x.AppendLine("    </Add>")
-    if ($Mode -eq "download") {
-        [void]$x.AppendLine('    <Display Level="None" AcceptEULA="TRUE" />')
-        [void]$x.AppendLine("    <Download Path=`"$script:odtTemp`" />")
-    } else {
-        if ($Mode -eq "cache") {
-            $sp = Join-Path $script:odtTemp "Office"
-            if (-not (Test-Path $sp)) { throw "Cache folder not found. Use Download Only first." }
-        }
-        [void]$x.AppendLine('    <Display Level="Full" AcceptEULA="TRUE" />')
-    }
+    [void]$x.AppendLine('    <Display Level="Full" AcceptEULA="TRUE" />')
     [void]$x.AppendLine('</Configuration>')
     return $x.ToString()
 }
 
 # ---- INSTALLATION ----
 function Step-Install {
-    param($ConfigXml, $Mode)
+    param($ConfigXml)
 
     $cp = Join-Path $script:odtTemp "configuration.xml"
     Set-Content -Path $cp -Value $ConfigXml -Encoding UTF8
     Write-Log "Config saved: $cp"
 
     $se = Join-Path $script:odtTemp "setup.exe"
-    $arg = if ($Mode -eq "download") { "/download" } else { "/configure" }
 
-    if ($Mode -eq "download") {
-        Color "  >> " "Yellow"; Color "Downloading Office..." "White"; Write-Host ""
-    } else {
-        Color "  >> " "Yellow"; Color "Installing Office..." "White"; Write-Host ""
-    }
+    Color "  >> " "Yellow"; Color "Downloading and installing Office..." "White"; Write-Host ""
     Write-Host ""
 
-    Write-Progress -Activity $(if ($Mode -eq "download") { "Downloading" } else { "Installing" }) -Status "Running ODT setup.exe..." -PercentComplete -1
+    Write-Progress -Activity "Installing" -Status "Running ODT setup.exe..." -PercentComplete -1
 
-    $proc = Start-Process -FilePath $se -ArgumentList "$arg `"$cp`"" -Wait -PassThru -NoNewWindow:$false
-    Write-Progress -Activity $(if ($Mode -eq "download") { "Downloading" } else { "Installing" }) -Completed
+    $proc = Start-Process -FilePath $se -ArgumentList "/configure `"$cp`"" -Wait -PassThru -NoNewWindow:$false
+    Write-Progress -Activity "Installing" -Completed
 
     Write-Host ""
     if ($proc.ExitCode -eq 0) {
+        Color "  >> " "Yellow"; Color "Cleaning up temporary files..." "White"; Write-Host ""
+        if (Test-Path $script:odtTemp) { Remove-Item $script:odtTemp -Recurse -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $script:odtExe)  { Remove-Item $script:odtExe -Force -ErrorAction SilentlyContinue }
         Color "  >> " "Yellow"; Color "Done" "Green"; Write-Host ""
-        Color "  >> " "Yellow"; Color "Operation completed successfully." "Green"; Write-Host ""
+        Color "  >> " "Yellow"; Color "Office installed successfully." "Green"; Write-Host ""
         Write-Log "Success"
     } else {
         Color "  >> " "Yellow"; Color "Failed (code: $($proc.ExitCode))" "Red"; Write-Host ""
@@ -445,23 +376,18 @@ try { Step-PrepareODT } catch {
 # Step 2: Version
 $version = Step-Version
 
-# Step 3: Architecture
-$arch = Step-Arch
-
-# Step 4: Language
+# Step 3: Language
 $lang = Step-Lang
 
-# Step 5: Products
+# Step 4: Products
 $products = Step-Products
 
-# Step 6: Apps
+# Step 5: Apps
 $apps = Step-Apps
 
-# Step 7: Mode
-$mode = Step-Mode
-
 # Summary
-Show-Summary -Version $version -Arch $arch -Lang $lang -Products $products -Apps $apps -Mode $mode
+$arch = if ($script:is64Bit) { "64" } else { "32" }
+Show-Summary -Version $version -Arch $arch -Lang $lang -Products $products -Apps $apps
 
 # Confirm
 $confirm = Read-Host "  Proceed? (Y/N) [Y]"
@@ -473,9 +399,9 @@ if ($confirm -eq "N" -or $confirm -eq "n") {
 Write-Host ""
 
 # Install
-$xml = Build-Config -Version $version -Arch $arch -Lang $lang -Products $products -Apps $apps -Mode $mode
+$xml = Build-Config -Version $version -Arch $arch -Lang $lang -Products $products -Apps $apps
 try {
-    Step-Install -ConfigXml $xml -Mode $mode
+    Step-Install -ConfigXml $xml
 } catch {
     Color "  [!] " "Red"; Color "Installation error: $_" "Red"; Write-Host ""
     Write-Log "Fatal error: $_"
