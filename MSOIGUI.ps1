@@ -37,12 +37,7 @@ $script:odtUrls = @("https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20
 $script:odtReady = $false
 $script:is64Bit = [Environment]::Is64BitOperatingSystem
 
-# Margins & sizes
-$script:M = 16    # horizontal margin
-$script:G = 8     # gap between groups
-$script:FW = 680  # form width
-$script:GW = $script:FW - $script:M * 2  # group width
-
+# Margins & sizes (defined inside Show-MainForm)
 # ---- HELPERS ----
 function Write-Log {
     param([string]$M, [string]$C = "Gray")
@@ -131,178 +126,198 @@ function Show-PrepDialog {
 
 # ---- MAIN FORM ----
 function Show-MainForm {
-    $M = 16
-    $FW = 680
-    $GW = $FW - $M * 2
+    $M = 20
+    $FW = 800
+    $GW = 760
     $y = 0
 
     $f = New-Object System.Windows.Forms.Form
     $f.AutoScaleMode = "Dpi"
     $f.Text = "MSOI - Microsoft Office Installer"
-    $f.ClientSize = New-Object System.Drawing.Size($FW, 590)
+    $f.ClientSize = New-Object System.Drawing.Size($FW, 660)
     $f.StartPosition = "CenterScreen"
     $f.FormBorderStyle = "FixedSingle"
     $f.MaximizeBox = $false
     $f.BackColor = "White"
     try { $f.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon([System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName) } catch {}
+    try { $f.DoubleBuffered = $true } catch {}
 
     # ===== TITLE =====
-    $y += 15
+    $y += 20
     $t = New-Object System.Windows.Forms.Label
     $t.Text = "MSOI - Microsoft Office Installer"
     $t.Location = New-Object System.Drawing.Point($M, $y)
-    $t.Size = New-Object System.Drawing.Size($GW, 26)
-    $t.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
-    $t.TextAlign = "MiddleLeft"
+    $t.Size = New-Object System.Drawing.Size($GW, 36)
+    $t.Font = New-Object System.Drawing.Font("Segoe UI", 15, [System.Drawing.FontStyle]::Bold)
+    $t.TextAlign = "MiddleCenter"
     $f.Controls.Add($t)
 
     # ===== VERSION =====
-    $y += 36
+    $y += 46
     $gv = New-Object System.Windows.Forms.GroupBox
     $gv.Text = " Office Version "
     $gv.Location = New-Object System.Drawing.Point($M, $y)
-    $gv.Size = New-Object System.Drawing.Size($GW, 52)
+    $gv.Size = New-Object System.Drawing.Size($GW, 56)
     $f.Controls.Add($gv)
 
     $cv = New-Object System.Windows.Forms.ComboBox
     $cv.Name = "cv"
     $cv.Location = New-Object System.Drawing.Point(10, 20)
-    $cv.Size = New-Object System.Drawing.Size($GW - 20, 22)
+    $cv.Size = New-Object System.Drawing.Size(($GW - 24), 26)
     $cv.DropDownStyle = "DropDownList"
+    $cv.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $cv.Items.AddRange(@("Office LTSC Professional Plus 2024", "Office LTSC Standard 2024", "Office LTSC Professional Plus 2021", "Office LTSC Standard 2021", "Office Professional Plus 2019", "Office Standard 2019"))
     $cv.SelectedIndex = 0
     $gv.Controls.Add($cv)
 
     # ===== ARCHITECTURE + LANGUAGE =====
-    $y += 62
+    $y += 66
     $gl = New-Object System.Windows.Forms.GroupBox
     $gl.Text = " Architecture & Language "
     $gl.Location = New-Object System.Drawing.Point($M, $y)
-    $gl.Size = New-Object System.Drawing.Size($GW, 70)
+    $gl.Size = New-Object System.Drawing.Size($GW, 80)
+    $gl.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $f.Controls.Add($gl)
 
     # Radio buttons
     $ra1 = New-Object System.Windows.Forms.RadioButton
     $ra1.Name = "ra1"
     if ($script:is64Bit) { $ra1.Text = "64-bit (recommended)"; $ra1.Checked = $true } else { $ra1.Text = "64-bit (unavailable)"; $ra1.Enabled = $false }
-    $ra1.Location = New-Object System.Drawing.Point(12, 20)
-    $ra1.Size = New-Object System.Drawing.Size(140, 20)
+    $ra1.Location = New-Object System.Drawing.Point(14, 24)
+    $ra1.Size = New-Object System.Drawing.Size(160, 24)
+    $ra1.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $gl.Controls.Add($ra1)
 
     $ra2 = New-Object System.Windows.Forms.RadioButton
     $ra2.Name = "ra2"
     if ($script:is64Bit) { $ra2.Text = "32-bit" } else { $ra2.Text = "32-bit (recommended)"; $ra2.Checked = $true }
-    $ra2.Location = New-Object System.Drawing.Point(12, 42)
-    $ra2.Size = New-Object System.Drawing.Size(140, 20)
+    $ra2.Location = New-Object System.Drawing.Point(14, 50)
+    $ra2.Size = New-Object System.Drawing.Size(160, 24)
+    $ra2.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $gl.Controls.Add($ra2)
 
     # Language
     $ll = New-Object System.Windows.Forms.Label
     $ll.Text = "Language:"
-    $ll.Location = New-Object System.Drawing.Point(220, 22)
-    $ll.Size = New-Object System.Drawing.Size(70, 20)
+    $ll.Location = New-Object System.Drawing.Point(260, 26)
+    $ll.Size = New-Object System.Drawing.Size(80, 24)
     $ll.TextAlign = "MiddleLeft"
+    $ll.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $gl.Controls.Add($ll)
 
     $cl = New-Object System.Windows.Forms.ComboBox
     $cl.Name = "cl"
-    $cl.Location = New-Object System.Drawing.Point(290, 20)
-    $cl.Size = New-Object System.Drawing.Size($GW - 300, 22)
+    $cl.Location = New-Object System.Drawing.Point(340, 24)
+    $cl.Size = New-Object System.Drawing.Size(($GW - 360), 26)
     $cl.DropDownStyle = "DropDownList"
+    $cl.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $cl.Items.AddRange(@("English (en-US)", "Spanish (es-ES)", "French (fr-FR)", "German (de-DE)", "Brazilian Portuguese (pt-BR)", "Italian (it-IT)", "Dutch (nl-NL)", "Polish (pl-PL)", "Russian (ru-RU)", "Japanese (ja-JP)"))
     $cl.SelectedIndex = 0
     $gl.Controls.Add($cl)
 
     # ===== ADDITIONAL PRODUCTS =====
-    $y += 80
+    $y += 90
     $gp = New-Object System.Windows.Forms.GroupBox
     $gp.Text = " Additional Products "
     $gp.Location = New-Object System.Drawing.Point($M, $y)
-    $gp.Size = New-Object System.Drawing.Size($GW, 68)
+    $gp.Size = New-Object System.Drawing.Size($GW, 76)
+    $gp.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $f.Controls.Add($gp)
 
     $cp1 = New-Object System.Windows.Forms.CheckBox
-    $cp1.Name = "cp1"; $cp1.Text = "Include Project"; $cp1.Location = New-Object System.Drawing.Point(12, 20); $cp1.Size = New-Object System.Drawing.Size(120, 22)
+    $cp1.Name = "cp1"; $cp1.Text = "Include Project"; $cp1.Location = New-Object System.Drawing.Point(14, 22); $cp1.Size = New-Object System.Drawing.Size(130, 26); $cp1.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $gp.Controls.Add($cp1)
 
     $cc1 = New-Object System.Windows.Forms.ComboBox
-    $cc1.Name = "cc1"; $cc1.Location = New-Object System.Drawing.Point(136, 20); $cc1.Size = New-Object System.Drawing.Size(130, 22); $cc1.DropDownStyle = "DropDownList"
+    $cc1.Name = "cc1"; $cc1.Location = New-Object System.Drawing.Point(160, 22); $cc1.Size = New-Object System.Drawing.Size(140, 26); $cc1.DropDownStyle = "DropDownList"; $cc1.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $cc1.Items.AddRange(@("Professional", "Standard")); $cc1.SelectedIndex = 0; $cc1.Enabled = $false
     $gp.Controls.Add($cc1)
     $cp1.Add_CheckedChanged({ $cc1.Enabled = $cp1.Checked })
 
     $cp2 = New-Object System.Windows.Forms.CheckBox
-    $cp2.Name = "cp2"; $cp2.Text = "Include Visio"; $cp2.Location = New-Object System.Drawing.Point(12, 42); $cp2.Size = New-Object System.Drawing.Size(120, 22)
+    $cp2.Name = "cp2"; $cp2.Text = "Include Visio"; $cp2.Location = New-Object System.Drawing.Point(14, 46); $cp2.Size = New-Object System.Drawing.Size(130, 26); $cp2.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $gp.Controls.Add($cp2)
 
     $cc2 = New-Object System.Windows.Forms.ComboBox
-    $cc2.Name = "cc2"; $cc2.Location = New-Object System.Drawing.Point(136, 42); $cc2.Size = New-Object System.Drawing.Size(130, 22); $cc2.DropDownStyle = "DropDownList"
+    $cc2.Name = "cc2"; $cc2.Location = New-Object System.Drawing.Point(160, 46); $cc2.Size = New-Object System.Drawing.Size(140, 26); $cc2.DropDownStyle = "DropDownList"; $cc2.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $cc2.Items.AddRange(@("Professional", "Standard")); $cc2.SelectedIndex = 0; $cc2.Enabled = $false
     $gp.Controls.Add($cc2)
     $cp2.Add_CheckedChanged({ $cc2.Enabled = $cp2.Checked })
 
     # ===== APPLICATIONS =====
-    $y += 78
+    $y += 86
     $ga = New-Object System.Windows.Forms.GroupBox
     $ga.Text = " Applications to Install "
     $ga.Location = New-Object System.Drawing.Point($M, $y)
-    $ga.Size = New-Object System.Drawing.Size($GW, 110)
+    $ga.Size = New-Object System.Drawing.Size($GW, 120)
+    $ga.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $f.Controls.Add($ga)
 
     $csa = New-Object System.Windows.Forms.CheckBox
-    $csa.Name = "csa"; $csa.Text = "Select All"; $csa.Location = New-Object System.Drawing.Point(12, 20); $csa.Size = New-Object System.Drawing.Size(100, 20); $csa.Checked = $true
+    $csa.Name = "csa"; $csa.Text = "Select All"; $csa.Location = New-Object System.Drawing.Point(14, 22); $csa.Size = New-Object System.Drawing.Size(110, 24); $csa.Checked = $true; $csa.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $ga.Controls.Add($csa)
 
     $ac = New-Object System.Collections.ArrayList
-    $ad = @(@{I="Word";X=12;Y=46;C=$true},@{I="Excel";X=175;Y=46;C=$true},@{I="PowerPoint";X=340;Y=46;C=$true},@{I="Outlook";X=500;Y=46;C=$true},@{I="Access";X=12;Y=70;C=$true},@{I="Publisher";X=175;Y=70;C=$true},@{I="OneNote";X=340;Y=70;C=$true},@{I="SkypeForBusiness";X=500;Y=70;C=$false})
+    $spc = [Math]::Floor(($GW - 40) / 4)
+    $ad = @(@{I="Word";X=14;Y=50;C=$true},@{I="Excel";X=14+$spc;Y=50;C=$true},@{I="PowerPoint";X=14+$spc*2;Y=50;C=$true},@{I="Outlook";X=14+$spc*3;Y=50;C=$true},@{I="Access";X=14;Y=78;C=$true},@{I="Publisher";X=14+$spc;Y=78;C=$true},@{I="OneNote";X=14+$spc*2;Y=78;C=$true},@{I="SkypeForBusiness";X=14+$spc*3;Y=78;C=$false})
     foreach ($a in $ad) {
         $c = New-Object System.Windows.Forms.CheckBox
-        $c.Name = "c_$($a.I)"; $c.Text = $a.I; $c.Location = New-Object System.Drawing.Point($a.X, $a.Y); $c.Size = New-Object System.Drawing.Size(130, 20); $c.Checked = $a.C
+        $c.Name = "c_$($a.I)"; $c.Text = $a.I; $c.Location = New-Object System.Drawing.Point($a.X, $a.Y); $c.Size = New-Object System.Drawing.Size(($spc - 10), 24); $c.Checked = $a.C; $c.Font = New-Object System.Drawing.Font("Segoe UI", 10)
         $ga.Controls.Add($c); [void]$ac.Add($c)
         $c.Add_CheckedChanged({ $ca = $true; foreach ($b in $ac) { if (-not $b.Checked) { $ca = $false; break } }; $csa.Checked = $ca })
     }
-    $csa.Add_CheckedChanged({ foreach ($b in $ac) { $b.Checked = $csa.Checked } })
+    $updatingAll = $false
+    $csa.Add_CheckedChanged({ if (-not $updatingAll) { $updatingAll = $true; foreach ($b in $ac) { $b.Checked = $csa.Checked }; $updatingAll = $false } })
 
     # ===== INSTALLATION MODE =====
-    $y += 120
+    $y += 130
     $gm = New-Object System.Windows.Forms.GroupBox
     $gm.Text = " Installation Mode "
     $gm.Location = New-Object System.Drawing.Point($M, $y)
-    $gm.Size = New-Object System.Drawing.Size($GW, 68)
+    $gm.Size = New-Object System.Drawing.Size($GW, 80)
+    $gm.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $f.Controls.Add($gm)
 
+    $gap = [Math]::Floor($GW / 3)
     $rm1 = New-Object System.Windows.Forms.RadioButton
-    $rm1.Name = "rm1"; $rm1.Text = "Download and Install (recommended)"; $rm1.Location = New-Object System.Drawing.Point(12, 20); $rm1.Size = New-Object System.Drawing.Size(290, 20); $rm1.Checked = $true
+    $rm1.Name = "rm1"; $rm1.Text = "Download and Install (recommended)"; $rm1.Location = New-Object System.Drawing.Point(14, 22); $rm1.Size = New-Object System.Drawing.Size(($gap - 20), 28); $rm1.Checked = $true; $rm1.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $gm.Controls.Add($rm1)
 
     $rm2 = New-Object System.Windows.Forms.RadioButton
-    $rm2.Name = "rm2"; $rm2.Text = "Download Only"; $rm2.Location = New-Object System.Drawing.Point(12, 42); $rm2.Size = New-Object System.Drawing.Size(290, 20)
+    $rm2.Name = "rm2"; $rm2.Text = "Download Only"; $rm2.Location = New-Object System.Drawing.Point(($gap + 10), 22); $rm2.Size = New-Object System.Drawing.Size(($gap - 20), 28); $rm2.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $gm.Controls.Add($rm2)
 
     $rm3 = New-Object System.Windows.Forms.RadioButton
-    $rm3.Name = "rm3"; $rm3.Text = "Install from Cache"; $rm3.Location = New-Object System.Drawing.Point(330, 20); $rm3.Size = New-Object System.Drawing.Size(290, 20)
+    $rm3.Name = "rm3"; $rm3.Text = "Install from Cache"; $rm3.Location = New-Object System.Drawing.Point(($gap * 2 + 10), 22); $rm3.Size = New-Object System.Drawing.Size(($gap - 20), 28); $rm3.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $gm.Controls.Add($rm3)
 
     # ===== STATUS BAR =====
-    $y += 78
+    $y += 90
     $sb = New-Object System.Windows.Forms.Label
     $sb.Name = "sb"
     $sb.Text = "Status: Ready"
     $sb.Location = New-Object System.Drawing.Point($M, $y)
-    $sb.Size = New-Object System.Drawing.Size($GW, 26)
+    $sb.Size = New-Object System.Drawing.Size($GW, 30)
     $sb.BorderStyle = "FixedSingle"
-    $sb.TextAlign = "MiddleLeft"
+    $sb.TextAlign = "MiddleCenter"
+    $sb.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $f.Controls.Add($sb)
 
     # ===== BUTTONS =====
-    $y += 36
+    $y += 40
+    $btnW = 170
+    $btnGap = 20
+    $btnStart = [Math]::Floor(($FW - $btnW * 2 - $btnGap) / 2)
     $bi = New-Object System.Windows.Forms.Button
-    $bi.Name = "bi"; $bi.Text = "Install Office"; $bi.Location = New-Object System.Drawing.Point($M, $y); $bi.Size = New-Object System.Drawing.Size(160, 38)
-    $bi.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $bi.Name = "bi"; $bi.Text = "Install Office"; $bi.Location = New-Object System.Drawing.Point($btnStart, $y); $bi.Size = New-Object System.Drawing.Size($btnW, 42)
+    $bi.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+    $bi.FlatStyle = "Flat"
     $f.Controls.Add($bi)
 
     $bc = New-Object System.Windows.Forms.Button
-    $bc.Name = "bc"; $bc.Text = "Cancel"; $bc.Location = New-Object System.Drawing.Point($M + 170, $y); $bc.Size = New-Object System.Drawing.Size(90, 38)
+    $bc.Name = "bc"; $bc.Text = "Cancel"; $bc.Location = New-Object System.Drawing.Point(($btnStart + $btnW + $btnGap), $y); $bc.Size = New-Object System.Drawing.Size($btnW, 42)
+    $bc.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+    $bc.FlatStyle = "Flat"
     $f.Controls.Add($bc)
 
     # ===== VERSION MAP =====
