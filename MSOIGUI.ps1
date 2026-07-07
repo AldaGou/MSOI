@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     MSOI - Microsoft Office Installation Tool (GUI)
 .DESCRIPTION
@@ -85,7 +85,7 @@ function Show-PrepDialog {
 
     $pb = New-Object System.Windows.Forms.ProgressBar
     $pb.Name = "pb"
-    $pb.Location = New-Object System.Drawing.Point($m, 90)
+    $pb.Location = New-Object System.Drawing.Point($m, 92)
     $pb.Size = New-Object System.Drawing.Size($w, 26)
     $pb.Style = "Marquee"
     $f.Controls.Add($pb)
@@ -214,7 +214,7 @@ function Show-MainForm {
     $bw = $spc - $gap
 
     $csa = New-Object System.Windows.Forms.CheckBox
-    $csa.Name = "csa"; $csa.Text = "Select All";     $csa.Location = New-Object System.Drawing.Point($pd, 30); $csa.Size = New-Object System.Drawing.Size(110, 24); $csa.Checked = $true; $csa.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+    $csa.Name = "csa"; $csa.Text = "Select All"; $csa.Location = New-Object System.Drawing.Point($pd, 30); $csa.Size = New-Object System.Drawing.Size(110, 24); $csa.Checked = $true; $csa.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $ga.Controls.Add($csa)
 
     $ad = @(@{I="Word";D="Word";C=$true},@{I="Excel";D="Excel";C=$true},@{I="PowerPoint";D="PowerPoint";C=$true},@{I="Outlook";D="Outlook";C=$false},@{I="Access";D="Access";C=$false},@{I="Publisher";D="Publisher";C=$false},@{I="OneNote";D="OneNote";C=$false},@{I="SkypeForBusiness";D="Skype for Business";C=$false},@{I="Project";D="Project";C=$false},@{I="Visio";D="Visio";C=$false})
