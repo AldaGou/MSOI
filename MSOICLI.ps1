@@ -26,8 +26,8 @@ function Color {
     else    { Write-Host $T -ForegroundColor $C -NoNewline }
 }
 
-function Line  { param([string]$C = "DarkGray")    Color "  $("─" * 72)" $C; Write-Host "" }
-function Hr    { param([string]$C = "DarkGray")    Color "  $("─" * 72)" $C; Write-Host "" }
+function Line  { param([string]$C = "DarkGray")    Color "  $("-" * 72)" $C; Write-Host "" }
+function Hr    { param([string]$C = "DarkGray")    Color "  $("-" * 72)" $C; Write-Host "" }
 
 # ---- LOGGING ----
 function Write-Log {
@@ -39,10 +39,13 @@ function Write-Log {
 function Show-Banner {
     Clear-Host
     Write-Host ""
-    Color "  ╔══════════════════════════════════════════════════════════════╗" "Cyan"; Write-Host ""
-    Color "  ║" "Cyan"; Color "         MSOI - Microsoft Office Installer          " "White"; Color "║" "Cyan"; Write-Host ""
-    Color "  ║" "Cyan"; Color "              Command Line Edition                   " "DarkGray"; Color "║" "Cyan"; Write-Host ""
-    Color "  ╚══════════════════════════════════════════════════════════════╝" "Cyan"; Write-Host ""
+    $w = 66
+    $hl = "+" + ("=" * $w) + "+"
+    $fmt = "{0,-" + $w + "}"
+    Color "  $hl" "Cyan"; Write-Host ""
+    Color "  |" "Cyan"; Color ($fmt -f "         MSOI - Microsoft Office Installer          ") "White"; Color "|" "Cyan"; Write-Host ""
+    Color "  |" "Cyan"; Color ($fmt -f "              Command Line Edition                   ") "DarkGray"; Color "|" "Cyan"; Write-Host ""
+    Color "  $hl" "Cyan"; Write-Host ""
     Write-Host ""
 }
 
@@ -51,14 +54,14 @@ function Show-ProgressBar {
     param([int]$Pct, [string]$Label = "Progress", [int]$W = 50)
     $f = [Math]::Floor($W * $Pct / 100)
     $e = $W - $f
-    $bar = "$("█" * $f)$("░" * $e)"
+    $bar = ("#" * $f) + ("." * $e)
     Color "  $Label " "DarkGray"; Color "[$bar] " "Cyan"; Color "$Pct%" "Yellow"
     if ($Pct -eq 100) { Write-Host "" } else { Write-Host "`r" -NoNewline }
 }
 
 # ---- ODT PREPARATION ----
 function Step-PrepareODT {
-    Color "  ──► " "Yellow"; Color "Preparing Office Deployment Tool..." "White"; Write-Host ""
+    Color "  >> " "Yellow"; Color "Preparing Office Deployment Tool..." "White"; Write-Host ""
     Write-Log "Starting ODT preparation"
     Write-Host ""
 
@@ -68,7 +71,7 @@ function Step-PrepareODT {
 
     $ok = $false
     foreach ($u in $script:odtUrls) {
-        Color "    ● Downloading ODT..." "DarkGray"
+        Color "    * Downloading ODT..." "DarkGray"
         Write-Progress -Activity "Downloading Office Deployment Tool" -Status "Connecting..." -PercentComplete -1
         try {
             $wc = New-Object System.Net.WebClient
@@ -84,7 +87,7 @@ function Step-PrepareODT {
     }
     if (-not $ok) { throw "Could not download ODT from any source." }
 
-    Color "    ● Extracting ODT..." "DarkGray"
+    Color "    * Extracting ODT..." "DarkGray"
     Write-Progress -Activity "Extracting Office Deployment Tool" -Status "Please wait..." -PercentComplete -1
     $p = Start-Process -FilePath $script:odtExe -ArgumentList "/quiet /extract:`"$script:odtTemp`"" -Wait -PassThru
     Write-Progress -Activity "Extracting Office Deployment Tool" -Completed
@@ -93,7 +96,7 @@ function Step-PrepareODT {
     Color "  [OK]" "Green"; Write-Host ""
 
     Write-Host ""
-    Color "  ──► " "Yellow"; Color "ODT ready" "Green"; Write-Host ""
+    Color "  >> " "Yellow"; Color "ODT ready" "Green"; Write-Host ""
     Write-Host ""
 }
 
@@ -116,7 +119,7 @@ function Step-Version {
         @{C="PerpetualVL2019";P="Standard2019Volume";VP="VisioPro2019Volume";VS="VisioStd2019Volume";PP="ProjectPro2019Volume";PS="ProjectStd2019Volume"}
     )
 
-    Color "  ──► " "Yellow"; Color "Select Office Version" "White"; Write-Host ""
+    Color "  >> " "Yellow"; Color "Select Office Version" "White"; Write-Host ""
     Hr
     for ($i = 0; $i -lt $versions.Count; $i++) {
         Color "    $($i+1). " "DarkGray"; Color "$($versions[$i])" "White"; Write-Host ""
@@ -142,7 +145,7 @@ function Step-Version {
 
 # ---- ARCHITECTURE ----
 function Step-Arch {
-    Color "  ──► " "Yellow"; Color "Architecture" "White"; Write-Host ""
+    Color "  >> " "Yellow"; Color "Architecture" "White"; Write-Host ""
     Hr
     if ($script:is64Bit) {
         Color "    System detected: " "DarkGray"; Color "64-bit" "Green"; Write-Host ""
@@ -172,7 +175,7 @@ function Step-Lang {
         "Polish (pl-PL)", "Russian (ru-RU)", "Japanese (ja-JP)"
     )
 
-    Color "  ──► " "Yellow"; Color "Select Language" "White"; Write-Host ""
+    Color "  >> " "Yellow"; Color "Select Language" "White"; Write-Host ""
     Hr
     for ($i = 0; $i -lt $langs.Count; $i++) {
         $name = ($langs[$i] -split ' \(')[0]
@@ -192,7 +195,7 @@ function Step-Lang {
 
 # ---- ADDITIONAL PRODUCTS ----
 function Step-Products {
-    Color "  ──► " "Yellow"; Color "Additional Products" "White"; Write-Host ""
+    Color "  >> " "Yellow"; Color "Additional Products" "White"; Write-Host ""
     Hr
 
     $proj = Read-Host "  Include Microsoft Project? (Y/N) [N]"
@@ -228,7 +231,7 @@ function Step-Products {
 function Step-Apps {
     $all = @("Word","Excel","PowerPoint","Outlook","Access","Publisher","OneNote","SkypeForBusiness")
 
-    Color "  ──► " "Yellow"; Color "Applications to Install" "White"; Write-Host ""
+    Color "  >> " "Yellow"; Color "Applications to Install" "White"; Write-Host ""
     Hr
     Color "    All applications are selected by default." "DarkGray"; Write-Host ""
     Color "    Enter numbers to EXCLUDE (separated by commas)." "DarkGray"; Write-Host ""
@@ -261,7 +264,7 @@ function Step-Apps {
 
 # ---- INSTALLATION MODE ----
 function Step-Mode {
-    Color "  ──► " "Yellow"; Color "Installation Mode" "White"; Write-Host ""
+    Color "  >> " "Yellow"; Color "Installation Mode" "White"; Write-Host ""
     Hr
     Color "    1. " "DarkGray"; Color "Download and Install (recommended)" "White"; Write-Host ""
     Color "    2. " "DarkGray"; Color "Download Only (without installing)" "White"; Write-Host ""
@@ -294,9 +297,13 @@ function Show-Summary {
     }
 
     Write-Host ""
-    Color "  ╔══════════════════════════════════════════════════════════════╗" "Cyan"; Write-Host ""
-    Color "  ║" "Cyan"; Color "                  INSTALLATION SUMMARY                " "White"; Color "║" "Cyan"; Write-Host ""
-    Color "  ╚══════════════════════════════════════════════════════════════╝" "Cyan"; Write-Host ""
+    $sw = 66
+    $hl = "+" + ("=" * $sw) + "+"
+    $fmt = "{0,-" + $sw + "}"
+    $paddedTitle = $fmt -f "INSTALLATION SUMMARY"
+    Color "  $hl" "Cyan"; Write-Host ""
+    Color "  |$paddedTitle|" "Cyan"; Write-Host ""
+    Color "  $hl" "Cyan"; Write-Host ""
 
     $projStr = if ($Products.Project) { "Yes - $($Products.ProjEd)" } else { "No" }
     $visStr  = if ($Products.Visio)   { "Yes - $($Products.VisioEd)" } else { "No" }
@@ -310,11 +317,18 @@ function Show-Summary {
         @("Mode",           $modeLabels[$Mode])
     )
 
+    $labelW = 17
+    $valueW = $sw - $labelW - 3
+    $lfmt = "{0,-" + $labelW + "}"
+    $vfmt = "{0,-" + $valueW + "}"
     foreach ($r in $rows) {
-        Color "  ║ " "Cyan"; Color ("{0,-18}" -f $r[0]) "DarkGray"; Color ": " "DarkGray"; Color $r[1] "White"
-        Color " ║" "Cyan"; Write-Host ""
+        $labelPart = $lfmt -f $r[0]
+        $valuePart = $vfmt -f $r[1]
+        Color "  |" "Cyan"
+        Color (" " + $labelPart + ": " + $valuePart) "White"
+        Color "|" "Cyan"; Write-Host ""
     }
-    Color "  ╚══════════════════════════════════════════════════════════════╝" "Cyan"; Write-Host ""
+    Color "  $hl" "Cyan"; Write-Host ""
 }
 
 # ---- XML GENERATION ----
@@ -369,9 +383,9 @@ function Step-Install {
     $arg = if ($Mode -eq "download") { "/download" } else { "/configure" }
 
     if ($Mode -eq "download") {
-        Color "  ──► " "Yellow"; Color "Downloading Office..." "White"; Write-Host ""
+        Color "  >> " "Yellow"; Color "Downloading Office..." "White"; Write-Host ""
     } else {
-        Color "  ──► " "Yellow"; Color "Installing Office..." "White"; Write-Host ""
+        Color "  >> " "Yellow"; Color "Installing Office..." "White"; Write-Host ""
     }
     Write-Host ""
 
@@ -382,18 +396,18 @@ function Step-Install {
 
     Write-Host ""
     if ($proc.ExitCode -eq 0) {
-        Color "  ──► " "Yellow"; Color "Done" "Green"; Write-Host ""
-        Color "  ──► " "Yellow"; Color "Operation completed successfully." "Green"; Write-Host ""
+        Color "  >> " "Yellow"; Color "Done" "Green"; Write-Host ""
+        Color "  >> " "Yellow"; Color "Operation completed successfully." "Green"; Write-Host ""
         Write-Log "Success"
     } else {
-        Color "  ──► " "Yellow"; Color "Failed (code: $($proc.ExitCode))" "Red"; Write-Host ""
+        Color "  >> " "Yellow"; Color "Failed (code: $($proc.ExitCode))" "Red"; Write-Host ""
         Color "      Check logs at: $script:odtTemp" "DarkGray"; Write-Host ""
         Write-Log "Failed with code $($proc.ExitCode)"
     }
 
     $elapsed = [math]::Round(((Get-Date) - $script:startAt).TotalSeconds, 1)
     Write-Host ""
-    Color "  ──► " "Yellow"; Color "Total time: " "White"; Color "$elapsed seconds" "DarkGray"; Write-Host ""
+    Color "  >> " "Yellow"; Color "Total time: " "White"; Color "$elapsed seconds" "DarkGray"; Write-Host ""
 }
 
 # ---- PAUSE ----
@@ -412,7 +426,7 @@ $ErrorActionPreference = "Stop"
 Show-Banner
 
 # Detect system
-Color "  ──► " "Yellow"; Color "System" "White"; Write-Host ""
+Color "  >> " "Yellow"; Color "System" "White"; Write-Host ""
 Hr
 Color "    OS: " "DarkGray"
 if ($script:is64Bit) { Color "64-bit" "Green" } else { Color "32-bit" "Yellow" }
