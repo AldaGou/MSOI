@@ -298,12 +298,14 @@ function Show-Summary {
     Color "  ║" "Cyan"; Color "                  INSTALLATION SUMMARY                " "White"; Color "║" "Cyan"; Write-Host ""
     Color "  ╚══════════════════════════════════════════════════════════════╝" "Cyan"; Write-Host ""
 
+    $projStr = if ($Products.Project) { "Yes - $($Products.ProjEd)" } else { "No" }
+    $visStr  = if ($Products.Visio)   { "Yes - $($Products.VisioEd)" } else { "No" }
     $rows = @(
         @("Office Version", $Version.Label),
         @("Architecture",   "$Arch-bit"),
         @("Language",       $Lang.Label),
-        @("Project",        if ($Products.Project) { "Yes - $($Products.ProjEd)" } else { "No" }),
-        @("Visio",          if ($Products.Visio) { "Yes - $($Products.VisioEd)" } else { "No" }),
+        @("Project",        $projStr),
+        @("Visio",          $visStr),
         @("Applications",   $appsStr),
         @("Mode",           $modeLabels[$Mode])
     )
@@ -399,7 +401,7 @@ function Pause-Message {
     param([string]$M = "Press Enter to exit...")
     Write-Host ""
     Color "  $M" "DarkGray"
-    [void]Read-Host
+    $null = Read-Host
 }
 
 # ====================================================
