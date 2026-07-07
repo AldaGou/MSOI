@@ -9,17 +9,6 @@
     Usage: irm https://aldagou.github.io/MSOI/MSOICLI.ps1 | iex
 #>
 
-# ---- AUTO-LAUNCH IN NEW WINDOW ----
-if (-not $env:MSOI_NEW_WIN) {
-    $env:MSOI_NEW_WIN = "1"
-    $url = "https://aldagou.github.io/MSOI/MSOICLI.ps1"
-    $ps = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { "pwsh.exe" } else { "powershell.exe" }
-    Start-Process $ps -ArgumentList "-NoExit -Command `"irm $url | iex`"" -WindowStyle Normal
-    Write-Host "Opening installer in a new window..." -ForegroundColor Green
-    Start-Sleep 2
-    exit
-}
-
 # ---- ADMIN CHECK ----
 $script:isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $script:isAdmin) { Write-Host "  [!] This script requires Administrator privileges." -ForegroundColor Red; Read-Host "Press Enter to exit"; exit 1 }
