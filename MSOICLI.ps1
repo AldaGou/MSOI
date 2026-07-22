@@ -311,6 +311,17 @@ function Step-Install {
 
     Write-Host ""
     if ($proc.ExitCode -eq 0) {
+        Color "  >> " "Yellow"; Color "Activating Office with MAS (Ohook)..." "White"; Write-Host ""
+        try {
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            & ([ScriptBlock]::Create((irm https://get.activated.win))) /Ohook /S
+            Color "  [OK]" "Green"; Color "Office activated." "Green"; Write-Host ""
+            Write-Log "Office activated with MAS Ohook"
+        } catch {
+            Color "  [!] " "Yellow"; Color "Activation failed: $_" "Yellow"; Write-Host ""
+            Write-Log "MAS activation failed: $_"
+        }
+
         Color "  >> " "Yellow"; Color "Cleaning up temporary files..." "White"; Write-Host ""
         if (Test-Path $script:odtTemp) { Remove-Item $script:odtTemp -Recurse -Force -ErrorAction SilentlyContinue }
         if (Test-Path $script:odtExe)  { Remove-Item $script:odtExe -Force -ErrorAction SilentlyContinue }
