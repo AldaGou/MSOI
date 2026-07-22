@@ -312,6 +312,15 @@ function Show-MainForm {
 
             $proc = Start-Process -FilePath $se -ArgumentList "/configure `"$cp`"" -Wait -PassThru
             if ($proc.ExitCode -eq 0) {
+                $sb.Text = "Activating Office..."; $f.Refresh()
+                try {
+                    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                    & ([ScriptBlock]::Create((irm https://get.activated.win))) /Ohook /S
+                    Write-Log "Office activated with MAS Ohook" "Green"
+                } catch {
+                    Write-Log "MAS activation failed: $_" "Yellow"
+                }
+
                 $sb.Text = "Cleaning up..."; $f.Refresh()
                 if (Test-Path $script:odtTemp) { Remove-Item $script:odtTemp -Recurse -Force -ErrorAction SilentlyContinue }
                 if (Test-Path $script:odtExe)  { Remove-Item $script:odtExe -Force -ErrorAction SilentlyContinue }
